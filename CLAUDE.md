@@ -4,9 +4,13 @@ India-first tutor marketplace. Students post tuition requirements free; tutors s
 
 ## Read these first
 
+Each file has exactly one job. Do not duplicate status between them — that is how they drift.
+
 1. **`docs/SOURCE_OF_TRUTH.md`** — canonical. Domain glossary, business rules with real numbers, data model, API conventions, and the architecture decision log. **If anything contradicts it, it is wrong.** Changing a rule means editing this file in the same commit.
-2. **`docs/PROGRESS.md`** — what's actually done. Start at "Next 3 actions".
-3. **`docs/PLAN.md`** — milestone task breakdown.
+2. **`docs/TASKS.md`** — the V1 task tree, `M1-03.2` style IDs. **The only place a box gets ticked.** Reference task IDs in commit messages; never renumber them.
+3. **`docs/PENDING.md`** — open decisions, blockers, deliberate debt, risks. Read at the start of each milestone.
+4. **`docs/PROGRESS.md`** — dated journal of what shipped. Start at "Next 3 actions".
+5. **`docs/PLAN.md`** — milestone shape and done-criteria. No checkboxes by design.
 
 ## Layout
 
@@ -76,4 +80,10 @@ Plus:
 
 ## Housekeeping
 
-When you finish a chunk of work, update `docs/PROGRESS.md` — changelog entry plus a refreshed "Next 3 actions" — in the same session. A session that ends without it leaves the next one blind.
+When you finish a chunk of work, in the same session:
+
+1. Tick the boxes in `docs/TASKS.md` (status lives there and nowhere else).
+2. Add a dated changelog entry to `docs/PROGRESS.md` and refresh its "Next 3 actions".
+3. Update `docs/PENDING.md` if you resolved a decision, hit a blocker, or knowingly took on debt.
+
+A session that ends without this leaves the next one blind.

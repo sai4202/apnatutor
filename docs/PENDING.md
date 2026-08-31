@@ -1,0 +1,94 @@
+# ApnaTutor — Pending
+
+> **What this file is for.** Not a copy of the unticked boxes in TASKS.md — that would just be a second list to forget to update. This tracks the things a checklist cannot hold: decisions nobody has made, work that is blocked and on what, debt taken on deliberately, and risks that could cost real time.
+>
+> **TASKS.md owns task status. This file owns everything that is stuck, undecided, or deferred.**
+
+**Last reviewed:** 2026-08-31
+
+---
+
+## 1. Decisions needed from you
+
+Nothing here can be resolved by writing code. Each one blocks or reshapes real work.
+
+| # | Decision | Blocks | Why it matters |
+|---|---|---|---|
+| D1 | **Which city do we launch in?** | `M1-06.4` locality seed | Locality data depth and the entire SEO page set depend on it. Seeding 200 Hyderabad localities is a different job from seeding 12 metro cities shallowly. Getting this wrong means reseeding and, worse, changing URLs that were already indexed. |
+| D2 | **Is `apnatutor.in` available?** | `M6-07.5` domain | Not yet checked. The name is already in the package namespace (`com.apnatutor`) and repo name. Cheap to change now, painful after launch. Worth checking this week even though it is not needed until M6. |
+| D3 | **Real credit package prices** | `M4-01.2` | The numbers in SoT §3.1 and the package seed are my hypothesis, not researched. They set the whole unit economics. Worth checking what tutors actually pay UrbanPro before committing. |
+| D4 | **Is the ₹10/credit accounting value right?** | `M4-01.2` | Everything downstream — lead pricing bands, package value, margin — hangs off it. |
+| D5 | **SMS provider: MSG91 vs Gupshup vs Twilio** | `M6-10.1` | Per-SMS cost in India varies severalfold, and OTP volume is the single largest per-user variable cost. Twilio is the easiest and the most expensive here. |
+| D6 | **GST invoicing from day one?** | `M4-07.2` | If credit sales need GST-compliant invoices at launch, that shapes the `payments` schema and the invoice format. Retrofitting tax fields onto historical transactions is genuinely unpleasant. |
+| D7 | **Do students ever need to see tutor contact details?** | `M2-03` masking rules | Currently one-directional: tutors unlock students. Whether a student can ever call a tutor directly changes the masking model and the whole lead economy. |
+
+---
+
+## 2. Blocked
+
+Nothing is blocked right now. M1 can start immediately.
+
+*(When something lands here, record what it is waiting on and who or what unblocks it — a blocker with no named dependency tends to sit forever.)*
+
+---
+
+## 3. Deliberate debt
+
+Taken on knowingly, with the repayment point named. This is not a list of mistakes — it is a list of decisions with a due date.
+
+| # | Debt | Taken at | Repay at | Notes |
+|---|---|---|---|---|
+| T1 | **No CSRF protection on the refresh endpoint** | M0 | `M1-04.5` | `SecurityConfig` disables CSRF globally, which is fine while every authenticated request carries a Bearer header. The moment the refresh cookie exists, that route is cookie-authenticated and needs its own defence. The comment in `SecurityConfig` says so; this is the tracked repayment. **Highest-severity item in this table.** |
+| T2 | **Mockito self-attaches as a JVM agent** | M0 | When it breaks | Warns on every test run. Future JDKs will forbid it; fix is an explicit `-javaagent` in Surefire. Plausibly bites sooner on Java 26 than it would on an LTS (ADR #4). |
+| T3 | **No global error handler or API docs** | M0 | `M1-01` | Deferred deliberately — there were no endpoints to shape the abstraction against. |
+| T4 | **Java 26 rather than an LTS** | M0 | If a library breaks | ADR #4. Fallback to Temurin 21 is documented. The risk is a bytecode-manipulating library (Mockito, Hibernate's enhancer) lagging the JDK. |
+| T5 | **No Testcontainers** | M0 | Only if Docker is ever adopted | ADR #5. Consequence: the test database must exist on any machine running the suite. `scripts/db-setup.sql` handles it, but CI setup in `M6-07.4` must create it explicitly. |
+| T6 | **Postgres full-text instead of Elasticsearch** | M2 | Only if search quality suffers | Deliberate — Elasticsearch is a lot of operational weight for a single-city launch. `M2-02.3` is the checkpoint that tells us if it is holding up. |
+| T7 | **One role per account** | M0 | On real user demand | ADR #10. Someone who is both a parent and a tutor needs two accounts. |
+| T8 | **Availability as free text** | M1 | v2 scheduling | `M1-08.2` stores availability as a note, not structured slots. Fine while there is no booking; structured slots arrive with the v2 calendar. |
+
+---
+
+## 4. Risks
+
+Things that could cost significant time, with the cheapest early mitigation.
+
+| # | Risk | Impact | Mitigation |
+|---|---|---|---|
+| R1 | **Unmasked contact details leak into a public response** | Destroys the entire business model — the product *is* the paywall on contact details | `M2-03.3` tests this explicitly. Mask at the DTO boundary so an entity physically cannot leak. Treat any leak as a P0. |
+| R2 | **Double-charging a tutor for one lead** | Direct loss of tutor trust; refund load | Unique constraint `M3-01.3`, idempotency `M3-07.7`, concurrency test `M3-08.3` |
+| R3 | **Webhook grants credits more than once** | Direct revenue loss | `M4-03.2` idempotency + `M4-03.6` replay tests |
+| R4 | **Cold-start: no tutors means no leads means no tutors** | The classic marketplace failure; no amount of code fixes it | Seed one city densely and manually recruit tutors before opening to parents. Product problem, not an engineering one — but it decides whether any of this matters. |
+| R5 | **SEO pages rank slowly or not at all** | The primary acquisition channel underperforms | `M2-07.5` verifies real SSR; ship SEO pages early so indexing has time to mature |
+| R6 | **Lead quality complaints from parents** | Churn on the demand side, which is the scarcer side | Unlock cap of 5 (SoT §3.2) is the main defence; watch complaint volume and tune |
+| R7 | **Ledger and cached balance drift** | Financial correctness, hard to unpick after the fact | `M3-05.5` reconciliation; ledger is authoritative by design |
+
+---
+
+## 5. Open questions for later milestones
+
+Not urgent, but recording them now so they are not rediscovered under pressure.
+
+- Should tutors see *who* else unlocked a lead, or only the remaining slot count?
+- Do we notify a student when their requirement caps out at 5 tutors?
+- What happens to a tutor's unlocked leads if their account is later suspended?
+- Should an expired requirement be re-postable in one click?
+- Do we need Hindi (or a regional language) UI at launch, or is English-first acceptable for the initial city?
+- How do we handle a tutor who serves multiple cities — does the travel radius model cover it?
+
+---
+
+## 6. Ready to start now
+
+In order. Nothing below is blocked.
+
+1. `M1-01` — shared web plumbing (error shape, handler, pagination, springdoc, idempotency)
+2. `M1-02` — identity schema
+3. `M1-03` — OTP flow
+4. `M1-04` — JWT sessions, **including T1, the CSRF repayment**
+
+---
+
+## Review cadence
+
+Re-read this file at the start of each milestone. Update the "Last reviewed" date when you do. Its value decays fast if it becomes a write-only file — a stale risk register is worse than none, because it looks like the risks were considered.

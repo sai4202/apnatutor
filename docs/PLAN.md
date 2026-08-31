@@ -1,6 +1,14 @@
 # ApnaTutor — Roadmap
 
-Living document. Task-level detail per milestone. For *decisions and rules*, see [SOURCE_OF_TRUTH.md](./SOURCE_OF_TRUTH.md). For *what is actually done*, see [PROGRESS.md](./PROGRESS.md).
+**Shape and reasoning per milestone — what each one is for and when it is finished.** Deliberately no checkboxes below M0: duplicated status lists drift, and then nobody trusts either one.
+
+| File | Owns |
+|---|---|
+| [SOURCE_OF_TRUTH.md](./SOURCE_OF_TRUTH.md) | Rules, numbers, data model, decision log — canonical |
+| **PLAN.md** (this file) | Milestone shape, rationale, done-criteria |
+| [TASKS.md](./TASKS.md) | **Task status.** The only place a box gets ticked |
+| [PENDING.md](./PENDING.md) | Open decisions, blockers, debt, risks |
+| [PROGRESS.md](./PROGRESS.md) | Dated journal of what actually shipped |
 
 **Goal of v1:** a parent posts a tuition requirement for free; matching tutors see it with contact details masked; a tutor spends credits to unlock it; ApnaTutor earns from credit-package sales. No lesson payments, no scheduling, no chat.
 
@@ -28,77 +36,57 @@ Living document. Task-level detail per milestone. For *decisions and rules*, see
 ---
 
 ## M1 — Accounts, profiles & trust
+`M1-01` … `M1-12` · [tasks](./TASKS.md#m1--accounts-profiles--trust)
 
-- [ ] `users`, `otp_codes`, `refresh_tokens` migrations
-- [ ] OTP request/verify (rate-limited: 5 sends/hour/phone, 5 attempts/code, 10 min TTL)
-- [ ] `SmsSender` interface + console-logging dev stub
-- [ ] JWT access (15 min) + refresh token in HttpOnly cookie (30 days), rotation on use
-- [ ] Spring Security config, role-based method authorization
-- [ ] Student profile CRUD
-- [ ] Tutor profile CRUD — subjects, fees, modes, locations, qualifications, languages
-- [ ] `FileStorage` interface + local-disk impl; photo and document upload with type/size validation
-- [ ] `verifications` table, badge levels, admin approve/reject queue
-- [ ] Profile completeness calculation
-- [ ] Frontend: signup/login (OTP), tutor onboarding wizard, profile editor
+Everything needed before there is anything to search for. Phone-first identity (OTP, JWT, refresh rotation), the catalog that profiles hang off, tutor and student profiles, file upload, and the admin verification ladder.
 
-**Done when:** a tutor can register by phone, complete a full profile, upload an ID, and an admin can approve it — end to end in the browser.
+**Contains the deferred M0 plumbing** (`M1-01`) — error shape, global handler, pagination, springdoc, idempotency infrastructure. Built now because there are finally real endpoints to shape it against.
+
+**Catalog moved here from M2** (`M1-06`). A tutor profile cannot be built without subjects, boards, grades and locations to attach to — "what do you teach, and where" is the centre of the onboarding wizard. Leaving it in M2 would have meant throwaway scaffolding.
+
+**Done when:** a tutor registers by phone, completes a full profile, uploads an ID, and an admin approves it — end to end in the browser.
 
 ---
 
-## M2 — Catalog & discovery
+## M2 — Discovery & SEO
+`M2-01` … `M2-08` · [tasks](./TASKS.md#m2--discovery--seo)
 
-- [ ] Catalog migrations: `subjects` (tree), `boards`, `grade_levels`, `locations`
-- [ ] Seed data: subject taxonomy (Academics → Class N Tuition → Subject; Exam Prep → JEE/NEET/…), boards, grades, and top Indian cities + localities
-- [ ] Tutor search: subject + location + filters (fee, mode, gender, experience, rating, verified-only, board, grade)
-- [ ] Sorting: relevance, rating, fee, experience, recently active
-- [ ] Postgres full-text + GIN/trigram indexes; **verify with `EXPLAIN ANALYZE`, no sequential scans on the hot path**
-- [ ] Public tutor profile endpoint (contacts masked)
-- [ ] SEO: `/tutors/[city]/[subject]` and `/tutors/[city]/[locality]/[subject]` server-rendered, unique titles/meta, JSON-LD, `sitemap.xml`, `robots.txt`
-- [ ] Frontend: search page with filter sidebar, result cards, tutor profile page
+Now purely about being found: search and filters, the contact-masking boundary, public tutor pages, and the programmatic city×subject landing pages that are the primary acquisition channel.
 
-**Done when:** search returns correct, fast results and a city×subject landing page renders complete HTML with no JavaScript enabled.
+The masking work (`M2-03`) deserves disproportionate care. Contact details *are* the product — a leak does not degrade the business model, it removes it.
+
+**Done when:** search returns correct, fast results (`EXPLAIN ANALYZE` clean on the hot path) and a city×subject page renders complete HTML with JavaScript disabled.
 
 ---
 
 ## M3 — Requirements & the lead loop
+`M3-01` … `M3-11` · [tasks](./TASKS.md#m3--requirements--the-lead-loop)
 
-- [ ] `requirements` + `lead_unlocks` migrations
-- [ ] Post requirement; `unlock_cost_credits` computed and **locked at creation** (SoT §3.1)
-- [ ] Student requirement dashboard; mark HIRED/CLOSED; 30-day expiry job
-- [ ] Tutor lead feed — matched on subjects × serviceable locations, masked projection
-- [ ] **Unlock endpoint** — the critical path: idempotency key, ledger debit, cap check, contact reveal, intro message, notifications. All in one transaction.
-- [ ] Unlock cap enforcement (5), `CAPPED` status transition, removal from other feeds
-- [ ] Concurrency: two tutors unlocking the 5th slot simultaneously must not both succeed
-- [ ] Notifications both sides
-- [ ] Frontend: post-requirement form, student dashboard, tutor lead feed, unlock confirmation
+The core transaction, and the milestone the product lives or dies on. Requirements, lead pricing locked at creation, the masked lead feed, and the unlock endpoint.
 
-**Done when:** the full loop works and the concurrency test proves the cap holds under parallel unlocks.
+**Credit ledger moved here from M4** (`M3-05`). Unlocking spends credits, so it cannot be built or tested without a wallet and ledger — splitting them across milestones would have left M3 unfinishable. Admin credit grants let the whole loop be exercised before any payment code exists.
+
+**Done when:** the full loop works, and a concurrency test proves the cap of 5 holds under parallel unlocks with no loser charged.
 
 ---
 
 ## M4 — Credits & payments
+`M4-01` … `M4-08` · [tasks](./TASKS.md#m4--credits--payments)
 
-- [ ] `credit_packages`, `credit_wallets`, `credit_transactions`, `payments` migrations
-- [ ] Ledger service — append-only, balance derivation, cache reconciliation, expiry
-- [ ] Signup bonus (10 credits at ID_VERIFIED, once, enforced by unique index)
-- [ ] Razorpay order creation + **signature-verified** webhook + idempotent credit grant
-- [ ] Wallet UI, transaction history, low-balance warning
-- [ ] `refund_requests` — tutor dispute, admin decision, credit return, cap slot freed
-- [ ] Invoice/receipt generation
+Money coming in: packages, Razorpay checkout, the signature-verified webhook, signup bonus, expiry, refunds and invoices.
 
-**Done when:** a real test-mode payment grants credits exactly once even if the webhook fires three times, and the ledger reconciles to the cached balance.
+The whole milestone reduces to one property — **credits are granted exactly once**, whatever the network does.
+
+**Done when:** a test-mode payment grants credits exactly once even if the webhook fires three times, and a replayed ledger reconciles to the cached balance.
 
 ---
 
 ## M5 — Reviews, admin & platform trust
+`M5-01` … `M5-10` · [tasks](./TASKS.md#m5--reviews-admin--trust)
 
-- [ ] `reviews` migration, eligibility rule, moderation workflow, tutor replies
-- [ ] Rating aggregation on approval
-- [ ] Admin console: verification queue, review moderation, users, credits, refunds, packages
-- [ ] Funnel metrics: signups, requirements, unlocks, revenue, conversion
-- [ ] Rate limiting on auth + unlock + search
-- [ ] `audit_log` on every admin action
-- [ ] Abuse reporting; DPDP-style data export + account deletion
+Reviews with moderation, the full admin console, rate limiting, audit logging, abuse reporting, and DPDP data rights.
+
+Note `M5-10.3`: account deletion must anonymise ledger rows, never delete them. Financial history has to survive a departed user.
 
 **Done when:** an admin can run the marketplace end to end without touching the database.
 
@@ -106,14 +94,11 @@ Living document. Task-level detail per milestone. For *decisions and rules*, see
 
 ## M6 — Polish & launch
 
-- [ ] Mobile-first responsive pass (assume most traffic is a mid-range Android phone)
-- [ ] Empty / loading / error states everywhere
-- [ ] Accessibility pass (keyboard, contrast, labels, focus)
-- [ ] Seed/demo dataset for a believable walkthrough
-- [ ] Playwright E2E of the money path
-- [ ] Performance: image optimisation, query budget, Lighthouse
-- [ ] Staging deploy, domain, TLS, backups, error tracking, analytics
-- [ ] Legal pages: terms, privacy, refund policy
+`M6-01` … `M6-10` · [tasks](./TASKS.md#m6--polish--launch)
+
+Making it usable by a real parent on a mid-range Android phone, then shipping it: responsive and accessibility passes, demo data, the automated money-path E2E, performance, deployment, observability, legal pages, and swapping every console stub for a real provider.
+
+**Done when:** the money path passes end to end against a staging deploy on a real domain, and `M6-10.5` confirms no dev stub survives into production.
 
 ---
 
@@ -121,14 +106,10 @@ Living document. Task-level detail per milestone. For *decisions and rules*, see
 
 In-app chat · calendar & lesson booking · lesson payments with escrow + commission · tutor payouts · video classes · coaching-institute accounts · lesson packages · Q&A and articles content hub · mobile apps · Elasticsearch · ranking/recommendations · referral programme · multi-role accounts
 
+The two SoT invariants — append-only ledger, generic engagement record — exist so this list is additive rather than a rewrite.
+
 ---
 
 ## Open questions
 
-| # | Question | Needed by |
-|---|---|---|
-| 1 | Which city do we launch in first? Seed locality data depth depends on it. | M2 |
-| 2 | Is `apnatutor.in` actually available? Not yet checked. | M6 |
-| 3 | Real credit package prices — the SoT numbers are a starting hypothesis, not researched. | M4 |
-| 4 | MSG91 vs Twilio vs Gupshup for OTP (cost per SMS in India differs a lot). | M1 → prod |
-| 5 | Do we need GST invoicing on credit purchases from day one? | M4 |
+Moved to [PENDING.md §1](./PENDING.md), alongside blockers, deliberate debt and risks, so that everything unresolved lives in one place.

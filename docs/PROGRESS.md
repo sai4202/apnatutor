@@ -11,9 +11,11 @@
 
 Read this first when resuming. Keep it to exactly three, always current.
 
-1. Write `V2__identity.sql` — `users`, `otp_codes`, `refresh_tokens` — with the `set_updated_at` trigger attached to each, then the matching JPA entities. `ddl-auto: validate` will catch any drift.
-2. Build the OTP flow: `SmsSender` interface + console stub, request/verify endpoints, rate limits from SoT §3.4 (10 min TTL, 5 attempts, 5 sends/hour).
-3. Add the shared web plumbing the first real endpoints need — `ApiError` response shape, `@RestControllerAdvice` handler, pagination wrapper, springdoc at `/swagger-ui`. These were deliberately deferred out of M0.
+1. `M1-01` — shared web plumbing deferred out of M0: `ApiError` + `ErrorCode`, `@RestControllerAdvice`, `PageResponse`, springdoc, and the `Idempotency-Key` infrastructure that M3-07 and M4-02 depend on.
+2. `M1-02` — `V2__identity.sql` (`users`, `otp_codes`, `refresh_tokens`) with `set_updated_at` triggers, plus entities. `ddl-auto: validate` will catch any drift.
+3. `M1-03` — OTP flow: `SmsSender` + console stub, request/verify, rate limits from SoT §3.4.
+
+Full breakdown in [TASKS.md](./TASKS.md); open decisions and debt in [PENDING.md](./PENDING.md).
 
 ---
 
@@ -61,6 +63,22 @@ Read this first when resuming. Keep it to exactly three, always current.
 - Spring Boot 4.x renamed things: the starter is `spring-boot-starter-webmvc`, not `-web`, and test support is split into per-starter `*-test` artifacts. Boot 3 tutorials will not match this `pom.xml`.
 - Local Postgres superuser password is `postgres`; app role is `apnatutor`/`apnatutor`. Local only.
 - Deliberately deferred from M0 to M1: global error handler, `ApiError` shape, pagination wrapper, springdoc. There were no endpoints to apply them to yet, and building them against imagined endpoints tends to produce the wrong abstraction.
+
+### 2026-08-31 — V1 task tree
+
+**Added**
+- `docs/TASKS.md` — 71 tasks with subtasks across M0–M6, permanent `M1-03.2` style IDs meant for commit messages.
+- `docs/PENDING.md` — open decisions, blockers, deliberate debt, risk register. Kept deliberately distinct from the task list: it holds what a checklist cannot, and is not a copy of the unticked boxes.
+
+**Restructured to stop status drift**
+- PLAN.md lost its M1–M6 checkboxes; it now owns milestone *shape and rationale* only. TASKS.md is the sole place a box gets ticked. Its open-questions table moved into PENDING.md §1.
+
+**Two sequencing bugs found and fixed while decomposing**
+- **Catalog moved M2 → M1** (`M1-06`). Tutor profiles need subjects, boards, grades and locations to attach to; the onboarding wizard is unbuildable without them. Would have stalled mid-M1.
+- **Credit ledger moved M4 → M3** (`M3-05`). The unlock endpoint spends credits, so M3 could not have been finished or tested with the ledger a milestone away. Admin credit grants now let the whole loop be exercised before any payment code exists.
+
+**Also captured**
+- The CSRF gap on the refresh endpoint is now tracked debt (PENDING.md T1) with its repayment pinned to `M1-04.5`, rather than living only as a code comment.
 
 ---
 
