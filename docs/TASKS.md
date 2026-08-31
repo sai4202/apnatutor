@@ -57,7 +57,7 @@ Complete 2026-08-31, commit `02208c3`.
 - ☑ `M1-01.1` `ApiError` record + `ErrorCode` enum (stable machine codes, SoT §6)
 - ☑ `M1-01.2` `@RestControllerAdvice` — validation, auth, forbidden, not-found, conflict, fallback
 - ☑ `M1-01.3` `PageResponse<T>` wrapper matching the SoT pagination contract
-- ⊘ `M1-01.4` springdoc-openapi + `/swagger-ui` — **blocked, no Spring Boot 4 release exists** (PENDING.md B1)
+- ☑ `M1-01.4` springdoc-openapi 3.1.0 + `/swagger-ui` — **unblocked**; 3.x is the Boot 4 line (2.x targets Boot 3)
 - ☑ `M1-01.5` Correlation-ID filter + structured request logging
 - ☐ `M1-01.6` `Idempotency-Key` infrastructure (table + interceptor) — needed by M3-07 and M4-02
 

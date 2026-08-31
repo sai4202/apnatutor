@@ -11,7 +11,7 @@
 
 Read this first when resuming. Keep it to exactly three, always current.
 
-1. `M1-01.6` — `Idempotency-Key` infrastructure (table + interceptor). Last piece of M1-01; M3-07 and M4-02 depend on it. `M1-01.4` (springdoc) is blocked upstream — see PENDING.md B1, not on the critical path.
+1. `M1-01.6` — `Idempotency-Key` infrastructure (table + interceptor). The last piece of M1-01; M3-07 and M4-02 depend on it. Needs a migration, so it can land alongside `M1-02`.
 2. `M1-02` — `V2__identity.sql` (`users`, `otp_codes`, `refresh_tokens`) with `set_updated_at` triggers, plus entities. `ddl-auto: validate` will catch any drift.
 3. `M1-03` — OTP flow: `SmsSender` + console stub, request/verify, rate limits from SoT §3.4.
 
@@ -104,7 +104,21 @@ Full breakdown in [TASKS.md](./TASKS.md); open decisions and debt in [PENDING.md
 - `PageResponse<T>` with an entity→DTO mapping overload. Spring's `Page` is deliberately not serialised directly — its JSON shape is a version-dependent implementation detail.
 - `CorrelationIdFilter` — honours an inbound `X-Correlation-Id`, **sanitised and length-capped** before it reaches a log line, clears MDC in a `finally` so pooled threads cannot inherit a stale ID. Log pattern updated to print it.
 
-**`M1-01.4` (springdoc) is blocked upstream** — latest springdoc is 2.8.6 for Boot 3 / Framework 6; no Boot 4 release exists. Verified against the Maven Central API rather than assumed. Recorded as PENDING.md B1; nothing depends on it.
+**`M1-01.4` (springdoc) — first recorded as blocked, then unblocked the same day. See the correction below.**
+
+### 2026-08-31 — M1-01.4 springdoc: correction and unblock
+
+**The blocker was not real.** I called springdoc unavailable for Spring Boot 4 on the strength of Maven Central's `solrsearch` API reporting 2.8.6 as the latest version. That field is cached and lags actual releases. The repository's own `maven-metadata.xml` lists 3.0.0-M1 through **3.1.0**, and the 3.x line is the Boot 4 line.
+
+**Now working:**
+- springdoc-openapi 3.1.0 pinned via a `springdoc.version` property (not managed by the Boot parent).
+- `OpenApiConfig` — API metadata plus a declared `bearerAuth` scheme, so Swagger UI's Authorize button works the moment M1-04 issues tokens. Without it every protected endpoint would be untestable from the browser.
+- Docs gated behind `APNATUTOR_API_DOCS_ENABLED`, **to be turned off in production** — an always-on schema dump is free reconnaissance.
+- SecurityConfig permits the exact doc paths, including bare `/v3/api-docs` and `/v3/api-docs.yaml`.
+
+**Verified live, not just compiled:** `/v3/api-docs` returns an OpenAPI 3.1.0 document titled "ApnaTutor API v1" with the `bearerAuth` scheme present, and `/swagger-ui.html` returns 200.
+
+**Lesson recorded in `backend/CLAUDE.md` and PENDING.md:** to check whether a dependency version exists, read `repo1.maven.org/.../maven-metadata.xml`, not the search API. M1-01 is now complete except `M1-01.6` (idempotency).
 
 ---
 

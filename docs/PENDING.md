@@ -26,9 +26,11 @@ Nothing here can be resolved by writing code. Each one blocks or reshapes real w
 
 ## 2. Blocked
 
-| # | Blocked | Waiting on | Detail |
-|---|---|---|---|
-| B1 | `M1-01.4` — springdoc / `/swagger-ui` API docs | An upstream springdoc release supporting Spring Boot 4 | Latest springdoc is **2.8.6, built for Spring Boot 3 / Spring Framework 6**. There is no 3.x line on Maven Central, and Boot 4 runs on Framework 7. Verified against the Maven Central API on 2026-08-31, not assumed. **Not on the critical path** — nothing depends on generated API docs. Options if it stays blocked: hand-write an OpenAPI YAML, or accept that the API contract is documented in SOURCE_OF_TRUTH.md §6 and the DTOs. Recheck at the start of each milestone. |
+Nothing is blocked.
+
+**~~B1 — springdoc / `/swagger-ui`~~ — resolved same day, and it was never a real blocker.** I recorded it as blocked on the strength of Maven Central's `solrsearch` API reporting 2.8.6 as the latest springdoc. That field was stale. The repository's own `maven-metadata.xml` lists 3.0.0 through **3.1.0**, and the 3.x line is precisely the Spring Boot 4 line. Now on springdoc 3.1.0, serving OpenAPI 3.1.0 at `/v3/api-docs` and Swagger UI at `/swagger-ui.html`.
+
+> **Lesson worth keeping:** `search.maven.org/solrsearch` returns a cached `latestVersion` that lags real releases. For "does version X exist", read `https://repo1.maven.org/maven2/<group path>/<artifact>/maven-metadata.xml` instead — it is generated from the repository itself. Do not declare a dependency unavailable on the strength of the search API alone.
 
 *(When something lands here, record what it is waiting on — a blocker with no named dependency tends to sit forever.)*
 
