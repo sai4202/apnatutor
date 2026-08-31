@@ -4,7 +4,7 @@
 >
 > **TASKS.md owns task status. This file owns everything that is stuck, undecided, or deferred.**
 
-**Last reviewed:** 2026-08-31
+**Last reviewed:** 2026-08-31 (after the backend/frontend split)
 
 ---
 
@@ -26,9 +26,11 @@ Nothing here can be resolved by writing code. Each one blocks or reshapes real w
 
 ## 2. Blocked
 
-Nothing is blocked right now. M1 can start immediately.
+| # | Blocked | Waiting on | Detail |
+|---|---|---|---|
+| B1 | `M1-01.4` — springdoc / `/swagger-ui` API docs | An upstream springdoc release supporting Spring Boot 4 | Latest springdoc is **2.8.6, built for Spring Boot 3 / Spring Framework 6**. There is no 3.x line on Maven Central, and Boot 4 runs on Framework 7. Verified against the Maven Central API on 2026-08-31, not assumed. **Not on the critical path** — nothing depends on generated API docs. Options if it stays blocked: hand-write an OpenAPI YAML, or accept that the API contract is documented in SOURCE_OF_TRUTH.md §6 and the DTOs. Recheck at the start of each milestone. |
 
-*(When something lands here, record what it is waiting on and who or what unblocks it — a blocker with no named dependency tends to sit forever.)*
+*(When something lands here, record what it is waiting on — a blocker with no named dependency tends to sit forever.)*
 
 ---
 
@@ -40,7 +42,7 @@ Taken on knowingly, with the repayment point named. This is not a list of mistak
 |---|---|---|---|---|
 | T1 | **No CSRF protection on the refresh endpoint** | M0 | `M1-04.5` | `SecurityConfig` disables CSRF globally, which is fine while every authenticated request carries a Bearer header. The moment the refresh cookie exists, that route is cookie-authenticated and needs its own defence. The comment in `SecurityConfig` says so; this is the tracked repayment. **Highest-severity item in this table.** |
 | T2 | **Mockito self-attaches as a JVM agent** | M0 | When it breaks | Warns on every test run. Future JDKs will forbid it; fix is an explicit `-javaagent` in Surefire. Plausibly bites sooner on Java 26 than it would on an LTS (ADR #4). |
-| T3 | **No global error handler or API docs** | M0 | `M1-01` | Deferred deliberately — there were no endpoints to shape the abstraction against. |
+| T3 | ~~No global error handler~~ — **done** `M1-01` | M0 | Repaid 2026-08-31 | `ApiError`, `ErrorCode`, `GlobalExceptionHandler`, `PageResponse`, `CorrelationIdFilter` all landed. API docs remain blocked separately as B1. |
 | T4 | **Java 26 rather than an LTS** | M0 | If a library breaks | ADR #4. Fallback to Temurin 21 is documented. The risk is a bytecode-manipulating library (Mockito, Hibernate's enhancer) lagging the JDK. |
 | T5 | **No Testcontainers** | M0 | Only if Docker is ever adopted | ADR #5. Consequence: the test database must exist on any machine running the suite. `scripts/db-setup.sql` handles it, but CI setup in `M6-07.4` must create it explicitly. |
 | T6 | **Postgres full-text instead of Elasticsearch** | M2 | Only if search quality suffers | Deliberate — Elasticsearch is a lot of operational weight for a single-city launch. `M2-02.3` is the checkpoint that tells us if it is holding up. |

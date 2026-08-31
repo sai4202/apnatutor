@@ -180,7 +180,8 @@ Base path `/api/v1`. JSON only. `camelCase` fields.
 - Entities never leave the service layer. Controllers speak DTOs (Java records).
 - Flyway migrations: `V<n>__snake_case_description.sql`, forward-only. **Never edit an applied migration** — write a new one. `ddl-auto` is `validate` everywhere, including local.
 - Every `@Transactional` boundary sits on the service, never the controller.
-- Secrets come from environment variables only. Nothing secret is ever committed; `.env.example` documents the shape.
+- **`backend/` and `frontend/` are self-contained projects** (ADR #11). Neither may read a file outside its own directory — no shared parent config, no relative paths climbing out. They communicate over HTTP only. Each carries its own `.env`, `.gitignore`, README and `CLAUDE.md`.
+- Secrets come from environment variables only. Nothing secret is ever committed; each project's `.env.example` documents its own shape and must be updated in the same commit as any new variable.
 - Frontend: Next.js App Router, TypeScript strict, Tailwind. Server Components for public/SEO pages, Client Components only where interactivity demands it.
 
 ---
@@ -198,6 +199,15 @@ Base path `/api/v1`. JSON only. `camelCase` fields.
 
 No Docker in this project — PostgreSQL runs as a native Windows service (`postgresql-x64-18`).
 
+**Configuration is per-project** (ADR #11):
+
+| Project | File | Loaded by |
+|---|---|---|
+| Backend | `backend/.env` | `spring.config.import` in `application.yml` |
+| Frontend | `frontend/.env.local` | Next.js, automatically |
+
+Database setup scripts belong to the backend: `backend/scripts/db-setup.sql` and `backend/scripts/db-reset.ps1`.
+
 ---
 
 ## 9. Architecture Decision Log
@@ -214,3 +224,4 @@ No Docker in this project — PostgreSQL runs as a native Windows service (`post
 | 8 | 2026-08-31 | **Unlock cap of 5** per requirement | Lead quality is the product. Uncapped unlocks turn a parent's phone into a spam target and kill retention on both sides. |
 | 9 | 2026-08-31 | **Phone + OTP** as primary identity | Indian consumer norm; email-first signup suppresses conversion badly in this market. |
 | 10 | 2026-08-31 | One role per account | Simplifies authorization in v1. Revisit only on real user demand. |
+| 11 | 2026-08-31 | **`backend/` and `frontend/` are self-contained projects in one repo** | Each builds, tests, runs and deploys from its own directory with its own config, and neither reads a file outside itself — so either can be extracted, containerised or deployed independently without untangling shared paths. They stay in one repo so an API change and its client update can land in a single commit. **Reverses the earlier shared repo-root `.env`**, which coupled the two at the filesystem level; config is now `backend/.env` and `frontend/.env.local`. Shared *product* docs stay in `docs/` because the business rules genuinely bind both sides, and splitting them would invite two diverging copies. |

@@ -3,7 +3,7 @@
 > Update this **in the same session as the code change**, never later. If a session ends without a changelog entry, the next session starts blind.
 
 **Current milestone:** M1 — Accounts, profiles & trust
-**Overall:** █░░░░░░ M0 complete
+**Overall:** █░░░░░░ M0 complete · M1-01 mostly done
 
 ---
 
@@ -11,7 +11,7 @@
 
 Read this first when resuming. Keep it to exactly three, always current.
 
-1. `M1-01` — shared web plumbing deferred out of M0: `ApiError` + `ErrorCode`, `@RestControllerAdvice`, `PageResponse`, springdoc, and the `Idempotency-Key` infrastructure that M3-07 and M4-02 depend on.
+1. `M1-01.6` — `Idempotency-Key` infrastructure (table + interceptor). Last piece of M1-01; M3-07 and M4-02 depend on it. `M1-01.4` (springdoc) is blocked upstream — see PENDING.md B1, not on the critical path.
 2. `M1-02` — `V2__identity.sql` (`users`, `otp_codes`, `refresh_tokens`) with `set_updated_at` triggers, plus entities. `ddl-auto: validate` will catch any drift.
 3. `M1-03` — OTP flow: `SmsSender` + console stub, request/verify, rate limits from SoT §3.4.
 
@@ -79,6 +79,32 @@ Full breakdown in [TASKS.md](./TASKS.md); open decisions and debt in [PENDING.md
 
 **Also captured**
 - The CSRF gap on the refresh endpoint is now tracked debt (PENDING.md T1) with its repayment pinned to `M1-04.5`, rather than living only as a code comment.
+
+### 2026-08-31 — Backend and frontend split into independent projects
+
+**Restructured** (ADR #11). `backend/` and `frontend/` are now self-contained: each has its own `.env`, `.env.example`, `.gitignore`, `README.md` and `CLAUDE.md`, and neither reads a file outside its own directory. One git repo is retained so an API change and its client update can land in a single commit.
+
+- `.env` → `backend/.env`; new `frontend/.env.local`. **This reverses the earlier shared repo-root `.env`**, which coupled the two at the filesystem level.
+- `scripts/` → `backend/scripts/` (they are database scripts, backend-owned).
+- `application.yml` now imports `./.env` only, never `../.env`.
+- `next.config.ts` returned to a plain config — the custom `loadEnvConfig("..")` existed *only* because the file was in the parent. Next loads `.env.local` from its own directory by default.
+- Root `.gitignore` trimmed to genuinely cross-cutting rules; each project owns its build-specific ones.
+- Shared product docs stay in `docs/` — the business rules bind both sides, and splitting them would invite two diverging copies.
+
+**Caught during the split:** `frontend/.gitignore` ships with a blanket `.env*` rule from create-next-app, which would have silently swallowed the new `.env.example`. Added a `!.env.example` negation.
+
+**Verified after restructuring:** `mvnw verify` green, `npm run build` clean, and the full chain re-checked live — `/actuator/health` `UP`/`db: UP` and three server-rendered `UP` pills at `localhost:3000`.
+
+### 2026-08-31 — M1-01 shared web plumbing (mostly)
+
+- `ErrorCode` — stable machine codes with HTTP status attached to each, so the two cannot drift across handlers. Includes the M3/M4 codes SoT already names as contract.
+- `ApiError` — the single error shape; `fieldErrors` omitted from JSON unless present.
+- `ApiException` + factories, with stack-trace capture disabled: these are expected outcomes on hot paths, not faults.
+- `GlobalExceptionHandler` — body/parameter validation, unreadable body, authentication, access denied, unmapped URL, and a catch-all. **Internals are logged, never returned.**
+- `PageResponse<T>` with an entity→DTO mapping overload. Spring's `Page` is deliberately not serialised directly — its JSON shape is a version-dependent implementation detail.
+- `CorrelationIdFilter` — honours an inbound `X-Correlation-Id`, **sanitised and length-capped** before it reaches a log line, clears MDC in a `finally` so pooled threads cannot inherit a stale ID. Log pattern updated to print it.
+
+**`M1-01.4` (springdoc) is blocked upstream** — latest springdoc is 2.8.6 for Boot 3 / Framework 6; no Boot 4 release exists. Verified against the Maven Central API rather than assumed. Recorded as PENDING.md B1; nothing depends on it.
 
 ---
 

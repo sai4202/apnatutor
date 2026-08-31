@@ -32,6 +32,9 @@ yarn-error.log*
 
 # env files (can opt-in for committing if needed)
 .env*
+# ...but .env.example carries no secrets and documents what to set, so it must
+# be committed. Without this negation the blanket .env* rule above swallows it.
+!.env.example
 
 # vercel
 .vercel

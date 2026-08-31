@@ -37,14 +37,14 @@ Complete 2026-08-31, commit `02208c3`.
 - ☑ `M0-02` Install PostgreSQL 18.6 as native Windows service, `psql` on PATH
 - ☑ `M0-03` Backend scaffold — Spring Boot 4.1.1, Java 26, Maven wrapper
 - ☑ `M0-04` Frontend scaffold — Next.js 16.3.3, React 19.2.8, Tailwind 4
-- ☑ `M0-05` `scripts/db-setup.sql` — role, both databases, `pg_trgm`
-- ☑ `M0-06` `scripts/db-reset.ps1` — from-zero rebuild
+- ☑ `M0-05` `backend/scripts/db-setup.sql` — role, both databases, `pg_trgm`
+- ☑ `M0-06` `backend/scripts/db-reset.ps1` — from-zero rebuild
 - ☑ `M0-07` `application.yml` + test profile
-- ☑ `M0-08` Single repo-root `.env` read by both apps
+- ☑ `M0-08` Per-project config — `backend/.env`, `frontend/.env.local` (ADR #11)
 - ☑ `M0-09` `V1__baseline.sql` — `pg_trgm`, `set_updated_at()` trigger function
 - ☑ `M0-10` `SecurityConfig` — default-deny, public allowlist, CORS, BCrypt
 - ☑ `M0-11` Chain verified end to end: Next → Boot → Postgres all `UP`, server-rendered
-- ☑ `M0-12` `git init`, `.gitignore`, `.env.example`, `CLAUDE.md`, `docs/`
+- ☑ `M0-12` `git init`, per-project `.gitignore` / `.env.example` / `README.md` / `CLAUDE.md`, shared `docs/`
 
 ---
 
@@ -52,13 +52,13 @@ Complete 2026-08-31, commit `02208c3`.
 
 **Goal:** a tutor registers by phone, builds a complete profile, uploads an ID, and an admin approves it.
 
-### ☐ `M1-01` Shared web plumbing
+### ▶ `M1-01` Shared web plumbing
 *Deferred out of M0 deliberately — there were no endpoints to shape it against.*
-- ☐ `M1-01.1` `ApiError` record + `ErrorCode` enum (stable machine codes, SoT §6)
-- ☐ `M1-01.2` `@RestControllerAdvice` — validation, auth, forbidden, not-found, conflict, fallback
-- ☐ `M1-01.3` `PageResponse<T>` wrapper matching the SoT pagination contract
-- ☐ `M1-01.4` springdoc-openapi dependency + `/swagger-ui` config, public in SecurityConfig
-- ☐ `M1-01.5` Correlation-ID filter + structured request logging
+- ☑ `M1-01.1` `ApiError` record + `ErrorCode` enum (stable machine codes, SoT §6)
+- ☑ `M1-01.2` `@RestControllerAdvice` — validation, auth, forbidden, not-found, conflict, fallback
+- ☑ `M1-01.3` `PageResponse<T>` wrapper matching the SoT pagination contract
+- ⊘ `M1-01.4` springdoc-openapi + `/swagger-ui` — **blocked, no Spring Boot 4 release exists** (PENDING.md B1)
+- ☑ `M1-01.5` Correlation-ID filter + structured request logging
 - ☐ `M1-01.6` `Idempotency-Key` infrastructure (table + interceptor) — needed by M3-07 and M4-02
 
 ### ☐ `M1-02` Identity schema

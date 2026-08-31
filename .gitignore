@@ -1,31 +1,18 @@
+# Repository-level ignores only.
+#
+# backend/ and frontend/ are self-contained projects and carry their own
+# .gitignore for anything language- or build-specific. Keep this file limited to
+# things that are genuinely cross-cutting, so neither project depends on rules
+# defined above it.
+
 # --- Secrets -----------------------------------------------------------------
-# Only .env.example is ever committed.
+# Belt and braces. Each project also ignores its own; this catches a stray .env
+# created at the root by mistake.
 .env
 .env.*
 !.env.example
 
-# --- Java / Maven ------------------------------------------------------------
-target/
-*.class
-*.jar
-!.mvn/wrapper/maven-wrapper.jar
-.mvn/.gradle-enterprise/
-.mvn/.develocity/
-
-# --- Node / Next.js ----------------------------------------------------------
-node_modules/
-.next/
-out/
-build/
-.turbo/
-*.tsbuildinfo
-next-env.d.ts
-
-# --- Uploads (local file storage) --------------------------------------------
-backend/uploads/
-backend/build/
-
-# --- IDE ---------------------------------------------------------------------
+# --- Editors and IDEs --------------------------------------------------------
 .idea/
 *.iml
 *.ipr
@@ -42,10 +29,3 @@ $RECYCLE.BIN/
 
 # --- Logs --------------------------------------------------------------------
 *.log
-npm-debug.log*
-logs/
-
-# --- Test output -------------------------------------------------------------
-coverage/
-playwright-report/
-test-results/
