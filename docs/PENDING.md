@@ -42,7 +42,7 @@ Taken on knowingly, with the repayment point named. This is not a list of mistak
 
 | # | Debt | Taken at | Repay at | Notes |
 |---|---|---|---|---|
-| T1 | **No CSRF protection on the refresh endpoint** | M0 | `M1-04.5` | `SecurityConfig` disables CSRF globally, which is fine while every authenticated request carries a Bearer header. The moment the refresh cookie exists, that route is cookie-authenticated and needs its own defence. The comment in `SecurityConfig` says so; this is the tracked repayment. **Highest-severity item in this table.** |
+| T1 | ~~No CSRF protection on the refresh endpoint~~ — **repaid** | M0 | Repaid 2026-08-31 (`M1-04.5`) | Two independent defences on the cookie-authenticated route: `SameSite=Strict`, and a required `X-Refresh-Request` header that HTML forms cannot set and cross-origin scripts cannot send without passing a preflight. Covered by test `refreshRequiresCsrfHeader`. |
 | T2 | **Mockito self-attaches as a JVM agent** | M0 | When it breaks | Warns on every test run. Future JDKs will forbid it; fix is an explicit `-javaagent` in Surefire. Plausibly bites sooner on Java 26 than it would on an LTS (ADR #4). |
 | T3 | ~~No global error handler~~ — **done** `M1-01` | M0 | Repaid 2026-08-31 | `ApiError`, `ErrorCode`, `GlobalExceptionHandler`, `PageResponse`, `CorrelationIdFilter` all landed. API docs remain blocked separately as B1. |
 | T4 | **Java 26 rather than an LTS** | M0 | If a library breaks | ADR #4. Fallback to Temurin 21 is documented. The risk is a bytecode-manipulating library (Mockito, Hibernate's enhancer) lagging the JDK. |
@@ -50,6 +50,8 @@ Taken on knowingly, with the repayment point named. This is not a list of mistak
 | T6 | **Postgres full-text instead of Elasticsearch** | M2 | Only if search quality suffers | Deliberate — Elasticsearch is a lot of operational weight for a single-city launch. `M2-02.3` is the checkpoint that tells us if it is holding up. |
 | T7 | **One role per account** | M0 | On real user demand | ADR #10. Someone who is both a parent and a tutor needs two accounts. |
 | T8 | **Availability as free text** | M1 | v2 scheduling | `M1-08.2` stores availability as a note, not structured slots. Fine while there is no booking; structured slots arrive with the v2 calendar. |
+| T9 | **Access tokens cannot be revoked mid-life** | M1 | Only if abuse demands it | Stateless JWTs are verified by signature, not looked up, which is what makes them cheap. The cost is that suspending a user leaves their current access token working for up to 15 minutes. Refresh is re-checked against account status, so the blast radius is one token lifetime. A revocation list would undo the statelessness; not worth it unless a real incident says otherwise. |
+| T10 | **OTP rate limiting is per phone only** | M1 | `M5-07` | Nothing yet caps requests per IP, so one attacker can walk many numbers. The per-phone cap already prevents running up a bill on any single victim. Proper per-IP buckets are `M5-07.3`. |
 
 ---
 

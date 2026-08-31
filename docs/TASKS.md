@@ -9,7 +9,7 @@
 | Milestone | Tasks | Done |
 |---|---|---|
 | M0 — Foundation | 12 | 12 ☑ |
-| M1 — Accounts, profiles & trust | 12 | 0 |
+| M1 — Accounts, profiles & trust | 12 | 3 ☑, 3 ▶ |
 | M2 — Discovery & SEO | 8 | 0 |
 | M3 — Requirements & the lead loop | 11 | 0 |
 | M4 — Credits & payments | 8 | 0 |
@@ -59,38 +59,39 @@ Complete 2026-08-31, commit `02208c3`.
 - ☑ `M1-01.3` `PageResponse<T>` wrapper matching the SoT pagination contract
 - ☑ `M1-01.4` springdoc-openapi 3.1.0 + `/swagger-ui` — **unblocked**; 3.x is the Boot 4 line (2.x targets Boot 3)
 - ☑ `M1-01.5` Correlation-ID filter + structured request logging
-- ☐ `M1-01.6` `Idempotency-Key` infrastructure (table + interceptor) — needed by M3-07 and M4-02
+- ▶ `M1-01.6` `Idempotency-Key` infrastructure — **table done** (`V3__idempotency.sql`); interceptor still to write. Needed by M3-07 and M4-02, so it can wait until there is a money-moving endpoint to wrap.
 
-### ☐ `M1-02` Identity schema
-- ☐ `M1-02.1` `V2__identity.sql` — `users`, `otp_codes`, `refresh_tokens`
-- ☐ `M1-02.2` Indexes: unique on `phone`, unique on `email` where not null
-- ☐ `M1-02.3` Attach `set_updated_at` trigger to each table
-- ☐ `M1-02.4` JPA entities + repositories; enums as strings, never ordinals
-- ☐ `M1-02.5` Verify `ddl-auto: validate` passes — entity/schema drift must fail the build
+### ☑ `M1-02` Identity schema
+- ☑ `M1-02.1` `V2__identity.sql` — `users`, `otp_codes`, `refresh_tokens`
+- ☑ `M1-02.2` Indexes: unique on `phone`, unique **case-insensitive partial** on `email`
+- ☑ `M1-02.3` Attach `set_updated_at` trigger to each table
+- ☑ `M1-02.4` JPA entities + repositories; enums as strings, never ordinals
+- ☑ `M1-02.5` `ddl-auto: validate` passes — and immediately earned its keep by catching a `CHAR`/`VARCHAR` drift on `token_hash`
 
-### ☐ `M1-03` OTP flow
-- ☐ `M1-03.1` `SmsSender` interface + `ConsoleSmsSender` dev stub, selected by config
-- ☐ `M1-03.2` `OtpService` — generate, **hash before storing**, verify, consume
-- ☐ `M1-03.3` Rate limits (SoT §3.4): 10 min TTL, 5 attempts/code, 5 sends/hour/phone
-- ☐ `M1-03.4` `POST /auth/otp/request`, `POST /auth/otp/verify`
-- ☐ `M1-03.5` Registration path: verify OTP on an unknown phone → create user with chosen role
-- ☐ `M1-03.6` Tests: happy path, wrong code, expired, attempt cap, send cap
-- ☐ `M1-03.7` Enumeration defence — response must not reveal whether a phone is registered
+### ☑ `M1-03` OTP flow
+- ☑ `M1-03.1` `SmsSender` interface + `ConsoleSmsSender` dev stub, selected by config
+- ☑ `M1-03.2` `OtpService` — generate via `SecureRandom`, **BCrypt-hash before storing**, verify, consume
+- ☑ `M1-03.3` Rate limits (SoT §3.4): 10 min TTL, 5 attempts/code, 5 sends/hour/phone
+- ☑ `M1-03.4` `POST /auth/otp/request`, `POST /auth/otp/verify`
+- ☑ `M1-03.5` Registration path: verify OTP on an unknown phone → create user with chosen role. Self-registering as `ADMIN` is refused.
+- ☑ `M1-03.6` Tests: happy path, wrong code, replay, superseded code, attempt cap, send cap
+- ☑ `M1-03.7` Enumeration defence — byte-identical response for registered and unregistered numbers, asserted by test
+- ☑ `M1-03.8` `PhoneNumbers` E.164 normalisation, so one human cannot become two accounts by typing a space differently *(added — not in the original breakdown)*
 
-### ☐ `M1-04` JWT sessions
-- ☐ `M1-04.1` `JwtService` — issue/parse/validate, secret from env, fail fast if under 32 bytes
-- ☐ `M1-04.2` Access token 15 min; refresh token 30 days, **stored hashed**
-- ☐ `M1-04.3` Refresh rotation + reuse detection (a replayed token revokes the family)
-- ☐ `M1-04.4` HttpOnly / Secure / SameSite refresh cookie
-- ☐ `M1-04.5` **CSRF defence on the refresh endpoint** — the caveat flagged in `SecurityConfig`; the global CSRF disable does not cover a cookie-authenticated route
-- ☐ `M1-04.6` `JwtAuthenticationFilter` wired into the chain
-- ☐ `M1-04.7` `POST /auth/refresh`, `POST /auth/logout`, `GET /auth/me`
+### ☑ `M1-04` JWT sessions
+- ☑ `M1-04.1` `TokenService` — issue/validate via Spring Security Nimbus, secret from env, **startup fails if under 32 bytes**
+- ☑ `M1-04.2` Access token 15 min; refresh token 30 days, **stored as SHA-256, never in the clear**
+- ☑ `M1-04.3` Refresh rotation + reuse detection (a replayed token revokes the whole family)
+- ☑ `M1-04.4` HttpOnly / Secure / SameSite=Strict refresh cookie, path-scoped to `/api/v1/auth`
+- ☑ `M1-04.5` **CSRF defence on the refresh endpoint** — repays PENDING T1. `SameSite=Strict` plus a required `X-Refresh-Request` header that HTML forms cannot set.
+- ☑ `M1-04.6` Bearer validation via Spring's `oauth2ResourceServer` — no hand-rolled auth filter
+- ☑ `M1-04.7` `POST /auth/refresh`, `POST /auth/logout`, `GET /auth/me`
 
-### ☐ `M1-05` Authorization
-- ☐ `M1-05.1` `CurrentUser` argument resolver / principal type
-- ☐ `M1-05.2` Method security on service entry points
-- ☐ `M1-05.3` Ownership checks — a user may only touch their own profile/requirements
-- ☐ `M1-05.4` Tests proving a student token cannot reach tutor endpoints and vice versa
+### ▶ `M1-05` Authorization
+- ☑ `M1-05.1` `CurrentUser` record + argument resolver; throws rather than injecting null
+- ☑ `M1-05.2` `@EnableMethodSecurity` on; JWT `role` claim mapped to a `ROLE_` authority
+- ☐ `M1-05.3` Ownership checks — nothing is owned yet; lands with profiles in `M1-07`/`M1-08`
+- ▶ `M1-05.4` Tests: unauthenticated and tampered-token cases done. Student-vs-tutor separation waits for the first role-restricted endpoint.
 
 ### ☐ `M1-06` Catalog schema & seed *(moved from M2 — see corrections above)*
 - ☐ `M1-06.1` `V3__catalog.sql` — `subjects` (self-referencing tree), `boards`, `grade_levels`, `locations`

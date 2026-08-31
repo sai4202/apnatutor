@@ -3,7 +3,7 @@
 > Update this **in the same session as the code change**, never later. If a session ends without a changelog entry, the next session starts blind.
 
 **Current milestone:** M1 — Accounts, profiles & trust
-**Overall:** █░░░░░░ M0 complete · M1-01 mostly done
+**Overall:** ██░░░░░ M0 done · M1: auth complete (M1-01…M1-04), profiles next
 
 ---
 
@@ -11,9 +11,9 @@
 
 Read this first when resuming. Keep it to exactly three, always current.
 
-1. `M1-01.6` — `Idempotency-Key` infrastructure (table + interceptor). The last piece of M1-01; M3-07 and M4-02 depend on it. Needs a migration, so it can land alongside `M1-02`.
-2. `M1-02` — `V2__identity.sql` (`users`, `otp_codes`, `refresh_tokens`) with `set_updated_at` triggers, plus entities. `ddl-auto: validate` will catch any drift.
-3. `M1-03` — OTP flow: `SmsSender` + console stub, request/verify, rate limits from SoT §3.4.
+1. **`M1-06` catalog schema and seed** — `subjects` tree, `boards`, `grade_levels`, `locations`. **Blocked on decision D1 (which city launches first)** for the depth of locality seeding; the subject/board/grade half can proceed now. Slugs become SEO URLs, so they are effectively permanent.
+2. `M1-07` / `M1-08` — student and tutor profiles. This is where `M1-05.3` ownership checks and the student-vs-tutor authorization tests finally have something to guard.
+3. `M1-09` / `M1-10` — file storage for photos and documents, then the verification ladder and admin approval queue.
 
 Full breakdown in [TASKS.md](./TASKS.md); open decisions and debt in [PENDING.md](./PENDING.md).
 
@@ -119,6 +119,34 @@ Full breakdown in [TASKS.md](./TASKS.md); open decisions and debt in [PENDING.md
 **Verified live, not just compiled:** `/v3/api-docs` returns an OpenAPI 3.1.0 document titled "ApnaTutor API v1" with the `bearerAuth` scheme present, and `/swagger-ui.html` returns 200.
 
 **Lesson recorded in `backend/CLAUDE.md` and PENDING.md:** to check whether a dependency version exists, read `repo1.maven.org/.../maven-metadata.xml`, not the search API. M1-01 is now complete except `M1-01.6` (idempotency).
+
+### 2026-08-31 — M1-02, M1-03, M1-04: identity, OTP and JWT sessions
+
+Phone + OTP authentication works end to end. **42 tests pass**, and the flow was also exercised live against the dev database.
+
+**Schema** (`V2__identity.sql`, `V3__idempotency.sql`)
+- `users`, `otp_codes`, `refresh_tokens`, `idempotency_keys`, with enum values constrained in the database as well as in Java, and `set_updated_at` triggers throughout.
+- Email uniqueness is a *case-insensitive partial* index — two accounts must not differ only by capitalisation, but any number may have no email.
+
+**`PhoneNumbers`** — E.164 normalisation, which turned out to matter more than expected. Without it the same person typing `98765 43210` and `+919876543210` gets two accounts, splits their reviews and credits across both, and sidesteps the OTP send-rate limit by varying the formatting. 22 unit tests cover it.
+
+**OTP** — `SecureRandom` codes, BCrypt-hashed before storage, constant-time comparison, single-use, superseded by any newer code, 5 attempts per code, 5 sends per hour per phone. Registered and unregistered numbers return byte-identical responses, asserted by test — otherwise the endpoint is a free oracle for discovering which numbers hold accounts.
+
+**Sessions** — 15-minute HS256 access tokens via Spring Security's Nimbus support (chosen over JJWT, which would have dragged in Jackson 2 against Boot 4's Jackson 3). 30-day refresh tokens stored as SHA-256, never in the clear, rotated on every use, with family-wide revocation on reuse. Bearer validation uses Spring's `oauth2ResourceServer` rather than a hand-rolled filter.
+
+**Debt T1 repaid** (`M1-04.5`): the refresh route is cookie-authenticated, so the global CSRF disable does not protect it. It now requires `SameSite=Strict` plus an `X-Refresh-Request` header that HTML forms cannot set.
+
+#### Three bugs caught before they shipped
+
+1. **`ddl-auto: validate` caught a schema drift** — `token_hash` declared `CHAR(64)` in SQL against a `String` field expecting `VARCHAR`. `VARCHAR` is the better choice regardless: `CHAR` space-pads, which is a quiet hazard for a value compared for exact equality.
+
+2. **The OTP attempt counter was being rolled back.** Recording a failed attempt and then rejecting the request are contradictory demands on one transaction: the rejection throws, the transaction is marked rollback-only, and the increment is discarded. The cap would never fire and a six-digit code — one million possibilities — would be brute-forceable. Fixed with `OtpAttemptRecorder` (`REQUIRES_NEW`).
+
+3. **The same bug in refresh-token reuse detection**, found by the test written for it. `rotate()` revoked the compromised family and then threw, rolling the revocation back — detection that detects and then forgets, leaving a stolen token working until expiry. Fixed with `TokenFamilyRevoker` (`REQUIRES_NEW`).
+
+> **Pattern worth remembering:** any security decision that must survive the exception reporting it needs its own transaction. Two instances in one milestone suggests there will be more — the M3 unlock path is the next place to watch.
+
+**Also found:** Flyway's `cleanOnValidationError` was **removed in Flyway 9/10**, so the setting in `application-test.yml` was silently doing nothing. Replaced with an explicit `FlywayMigrationStrategy` in `TestFlywayConfig` that cleans and re-migrates, which also gives every test run the from-zero rebuild `M6-07` depends on.
 
 ---
 
