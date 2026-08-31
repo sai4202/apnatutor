@@ -1,0 +1,51 @@
+# --- Secrets -----------------------------------------------------------------
+# Only .env.example is ever committed.
+.env
+.env.*
+!.env.example
+
+# --- Java / Maven ------------------------------------------------------------
+target/
+*.class
+*.jar
+!.mvn/wrapper/maven-wrapper.jar
+.mvn/.gradle-enterprise/
+.mvn/.develocity/
+
+# --- Node / Next.js ----------------------------------------------------------
+node_modules/
+.next/
+out/
+build/
+.turbo/
+*.tsbuildinfo
+next-env.d.ts
+
+# --- Uploads (local file storage) --------------------------------------------
+backend/uploads/
+backend/build/
+
+# --- IDE ---------------------------------------------------------------------
+.idea/
+*.iml
+*.ipr
+*.iws
+.vscode/
+!.vscode/extensions.json
+
+# --- OS ----------------------------------------------------------------------
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+.DS_Store
+
+# --- Logs --------------------------------------------------------------------
+*.log
+npm-debug.log*
+logs/
+
+# --- Test output -------------------------------------------------------------
+coverage/
+playwright-report/
+test-results/
