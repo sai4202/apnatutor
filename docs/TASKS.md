@@ -11,7 +11,7 @@
 | M0 — Foundation | 12 | 12 ☑ |
 | M1 — Accounts, profiles & trust | 12 | 8 ☑, 2 ▶ — **backend complete; frontend M1-11/M1-12 remain** |
 | M2 — Discovery & SEO | 8 | 6 ☑, 2 ▶ |
-| M3 — Requirements & the lead loop | 11 | 0 |
+| M3 — Requirements & the lead loop | 11 | 9 ☑ — **backend complete**, frontend M3-10/M3-11 remain |
 | M4 — Credits & payments | 8 | 0 |
 | M5 — Reviews, admin & trust | 10 | 0 |
 | M6 — Polish & launch | 10 | 0 |

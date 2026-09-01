@@ -11,9 +11,9 @@
 
 Read this first when resuming. Keep it to exactly three, always current.
 
-1. `M3-01` / `M3-02` — `requirements` and `lead_unlocks` schema, and the lead pricing service. **The unique constraint on `(requirement_id, tutor_id)` and the price being locked at creation are the two things to get right first**, because both are hard to retrofit.
-2. `M3-05` credit ledger and wallet — **append-only** (SoT Invariant 1), with a database-level guard against UPDATE and DELETE. Moved into M3 because the unlock endpoint spends credits and cannot be tested without it.
-3. `M3-07` / `M3-08` the unlock endpoint and its concurrency test: N tutors racing for the last slot, exactly one winner, no loser charged. This is the transaction the whole product rests on.
+1. `M3-10` / `M3-11` — the student and tutor screens for the lead loop. The whole M3 backend is reachable only through Swagger; these are what make it usable.
+2. `M4` — Razorpay checkout, packages, the signup bonus, credit expiry and the refund/dispute flow. **Blocked on decisions D3, D4 and D6** (real package prices, the ₹10/credit value, GST) before the seed data means anything.
+3. `M6-04` demo dataset — which also unblocks the deferred `M2-02.4` index verification, since index behaviour cannot be asserted against a handful of rows.
 
 Full breakdown in [TASKS.md](./TASKS.md); open decisions and debt in [PENDING.md](./PENDING.md).
 
@@ -330,6 +330,36 @@ Steps are **tabs, not a forced sequence**: a tutor who only wants to change thei
 `M2-07.2` (locality-level pages): 10 cities × 70 subjects is already 700 pages with no tutors on them. Adding locality depth multiplies thin pages before there is supply to fill them.
 
 > **Process note:** I corrupted `docs/TASKS.md` by round-tripping it through PowerShell's `Set-Content -Encoding utf8`, which double-encoded every non-ASCII character. Restored from git and redone with the editing tool. PowerShell rewrites are not safe for files containing anything outside ASCII.
+
+### 2026-09-01 — M3: the lead loop. **The transaction the product rests on.**
+
+**144 tests pass**, up from 111. Nine of eleven M3 tasks; only the two frontend ones remain.
+
+Four properties had to hold, each now enforced by something stronger than a comment:
+
+1. A tutor is never charged for a lead they do not receive.
+2. A tutor is never charged twice for the same lead.
+3. No more than five tutors unlock one requirement, however many try at once.
+4. A rejected attempt leaves no trace — no ledger entry, no partial record.
+
+**The unlock is one transaction with a row lock taken on the requirement first.** Without it, five tutors hitting the last slot together each read `unlockCount = 4`, each conclude there is room, and five get charged for four slots. Locks are always requirement-then-wallet — two orderings across two code paths is a deadlock waiting for traffic.
+
+**The unique index on `(requirement_id, tutor_id)` is the last line of defence.** The application check is the friendly path; the constraint is the guarantee, because a check can race and a constraint cannot.
+
+**`LeadUnlockConcurrencyTest` is why M3-08 exists.** Ten real threads released by one latch against a real database — a sequential test would pass with no locking at all. It asserts exactly five unlocks, the counter matching the records, every loser's balance untouched, and the ledger reconciling for all ten tutors under contention.
+
+**The ledger is append-only, enforced by a database trigger** that raises on UPDATE and DELETE. A comment saying "append-only" is not a control: the first person under deadline pressure who needs to "just fix" a balance writes an UPDATE, and financial history that can be edited is not history. Corrections are compensating `ADMIN_ADJUSTMENT` entries, so the error and its fix both stay visible. `reconcile()` replays the ledger against the cached balance — every cache is a chance to be wrong, and this is how we find out.
+
+**Lead prices are locked onto the requirement at creation** and never recomputed. A tutor shown a lead at 5 credits must be charged 5, whatever the bands say by the time they tap. 22 tests cover every band boundary; an off-by-one here is a tutor overpaying repeatedly until someone notices.
+
+**Notifications are delivered after commit, never inside the transaction.** Sending an SMS inside the unlock would let a provider timeout roll back a *paid unlock*, and holding a database transaction open across a third-party network call is how a slow provider becomes a database outage. The record is written transactionally; delivery follows and its failures are swallowed.
+
+**Three DTOs rather than one with conditionals** — `StudentView`, `LeadPreview` (no name, no phone: this is what makes an unlock worth paying for), `UnlockedLead`. A field absent from `LeadPreview` cannot be leaked into it, and the end-to-end test greps the feed response for the student's number.
+
+**Two mistakes of mine, both caught by the build:**
+
+- PowerShell's `Set-Content -Encoding utf8` wrote a BOM into two enum files and broke compilation. Second encoding failure from PowerShell writes today — source files now go through the editing tool only.
+- The end-to-end test asserted an exact feed total, which is really an assertion about the order tests happen to run in. Rewritten to assert on the specific requirement.
 
 ---
 
