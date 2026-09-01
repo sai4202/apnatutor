@@ -11,9 +11,9 @@
 
 Read this first when resuming. Keep it to exactly three, always current.
 
-1. `M1-08` **tutor profiles** — the core inventory. Subjects with per-subject grades and boards, fees in paise, teaching modes, serviceable locations, completeness calculation, publish/unpublish. Everything downstream (search, leads, unlocks) needs this to exist.
-2. `M1-07` student profiles, then `M1-09` file storage and `M1-10` the verification ladder with its admin queue.
-3. `M1-05.3` / `M1-05.4` — ownership checks and student-vs-tutor authorization tests, which finally have something to guard once profiles exist.
+1. `M1-09` **file storage** — `FileStorage` interface + local-disk impl, photo and document upload with content-sniffed MIME validation, sanitised filenames. Unblocks `M1-08.6` (qualification documents) and the profile photo, which is the last thing standing between a complete profile and 100%.
+2. `M1-10` verification ladder — submit ID and education documents, admin approve/reject, `verification_level` derivation, badges on the public profile.
+3. `M1-07.2` student profile endpoints, then `M1-11`/`M1-12` — the frontend auth screens and tutor onboarding wizard that drive all of this.
 
 Full breakdown in [TASKS.md](./TASKS.md); open decisions and debt in [PENDING.md](./PENDING.md).
 
@@ -205,6 +205,24 @@ Hero stat tiles show real catalog counts (70+ subjects, 10 cities) and the unloc
 **`/tutors/[slug]` profile page** — the real `M2-06` page built early against example data, prerendered static. **No phone number appears on it and none will when the data is real**: contact details are what tutors pay to unlock, so a public profile leaking one removes the business model rather than degrading it. The page explains where the number is instead of leaving the visitor hunting, and the reviews section says reviews will appear rather than inventing any.
 
 **Process failure worth recording:** commits `62dcda9`, `b8fd365` and `cb2fd10` shipped without touching these docs, despite CLAUDE.md requiring it in the same session. Caught only because the user asked. Backfilled here.
+
+### 2026-09-01 — M1-08 tutor profiles, the core inventory
+
+**63 tests pass** (up from 46). Everything downstream — search, the lead feed, unlocks — needs these to exist.
+
+**Schema** (`V6__profiles.sql`): `tutor_profiles`, `tutor_subjects`, `tutor_locations`, `tutor_qualifications`, plus a deliberately thin `student_profiles`. Fees in paise as `BIGINT`. Subjects are per-tutor-per-subject with their own fee, grades and boards, because a tutor may reasonably charge more for Class 12 Physics than Class 8 Maths.
+
+**Completeness scoring is weighted, not an even split.** Subjects and location outweigh a bio because a profile without them cannot be matched to a requirement at all — it is invisible however well written. Gates publishing at 60%, and an edit that drops a live profile below the bar **unpublishes it automatically**, since a half-empty listing in front of parents reflects on every other tutor. It also returns a plain-language list of what is still missing: "60% complete" tells a tutor they are stuck without telling them what to do.
+
+**Ownership is structural rather than a check** (`M1-05.3`). There is no "update tutor {id}" endpoint at all — every route acts on the token's own user. No parameter tampering can reach another tutor's profile, because there is no parameter to tamper with. Covered by a tutor-vs-tutor isolation test.
+
+**Two response types, not one with conditionals.** `OwnerView` has everything; `PublicView` has no phone, no email, no date of birth, no document URLs. Separate types because a conditional is something a future edit can silently get wrong — if a field is absent from the type, no code path can leak it. Asserted by a test that greps the public response for each.
+
+#### Three bugs found by the tests
+
+1. **`MultipleBagFetchException`** — my `@EntityGraph` tried to join-fetch three `List` collections at once, which Hibernate cannot do. I had been optimising a non-hot path: a profile read is one row for one user, while search is the hot path and never touches these collections. Removed the graph and let them load lazily inside the transaction.
+2. **`@Transactional(readOnly = true)` on a method that writes.** `getOwnProfile` creates the profile on first access, so the very first fetch failed with a 500.
+3. **Jackson 3 flipped `FAIL_ON_NULL_FOR_PRIMITIVES` to true.** Boot 4 ships Jackson 3, so an omitted `boolean` in a request body is now a hard parse error instead of defaulting to `false`. Request DTOs now use boxed types with explicit defaults, rather than disabling the check globally for every endpoint. Recorded in `backend/CLAUDE.md` — this will recur on every DTO from here.
 
 ---
 

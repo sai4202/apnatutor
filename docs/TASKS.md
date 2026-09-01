@@ -9,7 +9,7 @@
 | Milestone | Tasks | Done |
 |---|---|---|
 | M0 — Foundation | 12 | 12 ☑ |
-| M1 — Accounts, profiles & trust | 12 | 4 ☑, 3 ▶ |
+| M1 — Accounts, profiles & trust | 12 | 5 ☑, 4 ▶ |
 | M2 — Discovery & SEO | 8 | 2 ▶ (frontend built ahead of the API) |
 | M3 — Requirements & the lead loop | 11 | 0 |
 | M4 — Credits & payments | 8 | 0 |
@@ -90,8 +90,8 @@ Complete 2026-08-31, commit `02208c3`.
 ### ▶ `M1-05` Authorization
 - ☑ `M1-05.1` `CurrentUser` record + argument resolver; throws rather than injecting null
 - ☑ `M1-05.2` `@EnableMethodSecurity` on; JWT `role` claim mapped to a `ROLE_` authority
-- ☐ `M1-05.3` Ownership checks — nothing is owned yet; lands with profiles in `M1-07`/`M1-08`
-- ▶ `M1-05.4` Tests: unauthenticated and tampered-token cases done. Student-vs-tutor separation waits for the first role-restricted endpoint.
+- ☑ `M1-05.3` Ownership — **structural, not a check**. No endpoint accepts a profile id to edit; they all act on the token's own user, so no parameter tampering can reach another tutor's profile.
+- ☑ `M1-05.4` Tests: unauthenticated, tampered token, student-blocked-from-tutor-endpoints, and tutor-vs-tutor isolation
 
 ### ☑ `M1-06` Catalog schema & seed *(moved from M2 — see corrections above)*
 - ☑ `M1-06.1` `V4__catalog.sql` — `subjects` (self-referencing tree), `boards`, `grade_levels`, `locations`
@@ -101,21 +101,21 @@ Complete 2026-08-31, commit `02208c3`.
 - ☑ `M1-06.5` Unique slugs on subjects and locations, chosen to read naturally in a URL
 - ☑ `M1-06.6` Read-only catalog endpoints under `/api/v1/public/catalog`, cached 6h
 
-### ☐ `M1-07` Student profile
-- ☐ `M1-07.1` `V4__profiles.sql` — `student_profiles`
+### ▶ `M1-07` Student profile
+- ☑ `M1-07.1` `V6__profiles.sql` — `student_profiles` (deliberately thin; every field asked for is a chance to abandon the funnel)
 - ☐ `M1-07.2` Create-on-first-login, read, update endpoints
 - ☐ `M1-07.3` Tests
 
-### ☐ `M1-08` Tutor profile
-- ☐ `M1-08.1` `V4__profiles.sql` — `tutor_profiles`, `tutor_subjects`, `tutor_locations`, `tutor_qualifications`
-- ☐ `M1-08.2` Core CRUD — bio, photo, gender, experience, languages, demo, availability
-- ☐ `M1-08.3` Fees: `fee_min`/`fee_max` in **paise**, unit, negotiable flag
-- ☐ `M1-08.4` Subject selection with per-subject grades and boards
-- ☐ `M1-08.5` Teaching modes + serviceable locations + travel radius
-- ☐ `M1-08.6` Qualifications with document upload
-- ☐ `M1-08.7` Profile completeness calculation
-- ☐ `M1-08.8` Publish / unpublish — an incomplete profile must not be publishable
-- ☐ `M1-08.9` Tests
+### ▶ `M1-08` Tutor profile
+- ☑ `M1-08.1` `V6__profiles.sql` — `tutor_profiles`, `tutor_subjects`, `tutor_locations`, `tutor_qualifications`
+- ☑ `M1-08.2` Core CRUD — bio, photo, gender, experience, languages, demo, availability
+- ☑ `M1-08.3` Fees in **paise** as `BIGINT`, with unit and negotiable flag
+- ☑ `M1-08.4` Subject selection with per-subject grades and boards; categories rejected as unteachable
+- ☑ `M1-08.5` Teaching modes + serviceable locations + travel radius
+- ▶ `M1-08.6` Qualifications — add/remove done; **document upload waits on `M1-09`** file storage
+- ☑ `M1-08.7` Completeness scoring, weighted by what a parent decides on, plus a plain-language "what's missing" list
+- ☑ `M1-08.8` Publish / unpublish — refuses below 60%, and auto-unpublishes if an edit drops it below
+- ☑ `M1-08.9` Tests — 7 unit + 10 integration
 
 ### ☐ `M1-09` File storage
 - ☐ `M1-09.1` `FileStorage` interface + `LocalFileStorage`, provider chosen by config
