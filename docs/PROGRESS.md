@@ -3,7 +3,7 @@
 > Update this **in the same session as the code change**, never later. If a session ends without a changelog entry, the next session starts blind.
 
 **Current milestone:** M1 — Accounts, profiles & trust
-**Overall:** ██░░░░░ M0 done · M1: auth complete (M1-01…M1-04), profiles next
+**Overall:** ███░░░░ M0 done · M1: auth + catalog done, profiles next · frontend design system in place
 
 ---
 
@@ -11,9 +11,9 @@
 
 Read this first when resuming. Keep it to exactly three, always current.
 
-1. **`M1-06` catalog schema and seed** — `subjects` tree, `boards`, `grade_levels`, `locations`. **Blocked on decision D1 (which city launches first)** for the depth of locality seeding; the subject/board/grade half can proceed now. Slugs become SEO URLs, so they are effectively permanent.
-2. `M1-07` / `M1-08` — student and tutor profiles. This is where `M1-05.3` ownership checks and the student-vs-tutor authorization tests finally have something to guard.
-3. `M1-09` / `M1-10` — file storage for photos and documents, then the verification ladder and admin approval queue.
+1. `M1-08` **tutor profiles** — the core inventory. Subjects with per-subject grades and boards, fees in paise, teaching modes, serviceable locations, completeness calculation, publish/unpublish. Everything downstream (search, leads, unlocks) needs this to exist.
+2. `M1-07` student profiles, then `M1-09` file storage and `M1-10` the verification ladder with its admin queue.
+3. `M1-05.3` / `M1-05.4` — ownership checks and student-vs-tutor authorization tests, which finally have something to guard once profiles exist.
 
 Full breakdown in [TASKS.md](./TASKS.md); open decisions and debt in [PENDING.md](./PENDING.md).
 
@@ -147,6 +147,29 @@ Phone + OTP authentication works end to end. **42 tests pass**, and the flow was
 > **Pattern worth remembering:** any security decision that must survive the exception reporting it needs its own transaction. Two instances in one milestone suggests there will be more — the M3 unlock path is the next place to watch.
 
 **Also found:** Flyway's `cleanOnValidationError` was **removed in Flyway 9/10**, so the setting in `application-test.yml` was silently doing nothing. Replaced with an explicit `FlywayMigrationStrategy` in `TestFlywayConfig` that cleans and re-migrates, which also gives every test run the from-zero rebuild `M6-07` depends on.
+
+### 2026-09-01 — M1-06 catalog, and the frontend design system
+
+**Catalog** (`V4__catalog.sql`, `V5__catalog_seed.sql`) — 70 subjects across 7 categories, 10 boards, 19 grade levels, 10 cities, and localities (Hyderabad 20, Bengaluru 14, others shallow). Public endpoints under `/api/v1/public/catalog`, cached 6 hours: this is read on nearly every page load, changes maybe monthly, and is identical for every visitor.
+
+**Launch-city assumption made rather than blocking.** Hyderabad is seeded deepest. Slugs only become permanent once a search engine indexes them, which is M6, so this stays cheap to change until then. Other cities are deliberately shallow — seeding hundreds of localities where we have no tutors creates empty pages, which `M2-08.4` has to mark `noindex` anyway. Decision D1 remains open in PENDING.md.
+
+**Design system** — white ground, a single blue accent. Blue is doing real work here rather than being a preference: this is a marketplace where a parent hands a stranger their phone number and lets them into their home, so the palette has to read institutional and safe. One accent hue used sparingly also means anything rendered in blue is unambiguously *the* action on the page.
+
+- Tokens in `globals.css` via Tailwind 4 `@theme`: a blue ramp, slate neutrals (a trace of blue so they sit with the accent rather than fight it), a constrained ~1.25 type scale, and brand-tinted shadows.
+- Primitives in `components/ui.tsx` — hand-rolled rather than a component library, which for this many elements would cost more in bundle size and override-fighting than it saves.
+- One `Container` sets page width everywhere, so section edges line up.
+- 44px minimum touch targets; most traffic will be a thumb on a mid-range Android phone.
+- One consistent `:focus-visible` ring, `prefers-reduced-motion` respected, a skip-to-content link, and `sr-only` labels where a visible one would clutter.
+- **No dark mode, deliberately.** Every screen is designed against white, and a half-considered dark variant is worse than none.
+
+**Pages** — landing, `/tutors`, `/login`, `/for-tutors`, `/post-requirement`. All Server Components except login. The homepage prerenders statically with hourly revalidation and ships **zero client JavaScript**, which is what the SEO strategy actually depends on.
+
+**Login is real** and drives the M1 auth API end to end. The access token is held in React state and nowhere else — not `localStorage`, not `sessionStorage`, since anything readable by JavaScript is readable by a successful XSS. Refresh-on-load belongs in a shared auth provider (`M1-11.3`).
+
+**Empty states are honest.** `/tutors` says there are no tutors rather than rendering fake cards, and `/post-requirement` disables its fields rather than silently discarding input. A demo that looks populated but is not makes real progress impossible to distinguish from a mockup.
+
+**Caught while building:** Spring Data does not scan repository interfaces nested inside a class — the failure is an unhelpful "no qualifying bean" at startup. Also renamed `Location.city_` to `cityLevel`, because Spring Data treats `_` in a derived query name as a property-path separator, so `findByCity_True` would parse as `city.true`.
 
 ---
 

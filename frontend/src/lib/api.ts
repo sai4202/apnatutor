@@ -65,6 +65,61 @@ export async function apiFetch<T>(
   return res.status === 204 ? (undefined as T) : ((await res.json()) as T);
 }
 
+/* -------------------------------------------------------------------------- */
+/* Catalog                                                                     */
+/* -------------------------------------------------------------------------- */
+
+export interface SubjectNode {
+  id: number;
+  name: string;
+  slug: string;
+  leaf: boolean;
+  children: SubjectNode[];
+}
+
+export interface City {
+  id: number;
+  name: string;
+  state: string;
+  slug: string;
+}
+
+/**
+ * Fetches the subject tree.
+ *
+ * Revalidated hourly rather than fetched per request: this is reference data
+ * that changes maybe monthly, and it is needed on nearly every page. `next.revalidate`
+ * lets the whole page stay statically rendered, which is what makes the SEO
+ * landing pages fast.
+ *
+ * Returns an empty array rather than throwing if the backend is down — a
+ * degraded homepage is better than an error page, and the sections that depend
+ * on this render their own empty state.
+ */
+export async function fetchSubjectTree(): Promise<SubjectNode[]> {
+  try {
+    const res = await fetch(`${API_BASE_URL}/public/catalog/subjects`, {
+      next: { revalidate: 3600 },
+    });
+    if (!res.ok) return [];
+    return (await res.json()) as SubjectNode[];
+  } catch {
+    return [];
+  }
+}
+
+export async function fetchCities(): Promise<City[]> {
+  try {
+    const res = await fetch(`${API_BASE_URL}/public/catalog/cities`, {
+      next: { revalidate: 3600 },
+    });
+    if (!res.ok) return [];
+    return (await res.json()) as City[];
+  } catch {
+    return [];
+  }
+}
+
 export type HealthStatus = "UP" | "DOWN" | "UNREACHABLE";
 
 export interface BackendHealth {

@@ -1,26 +1,174 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
+/*
+ * ApnaTutor design tokens.
+ *
+ * White ground, blue as the single accent. Blue is doing real work here beyond
+ * taste: this is a marketplace where a parent hands a stranger their phone
+ * number and lets them into their home, so the palette has to read as
+ * institutional and safe rather than playful. Blue is the colour banks and
+ * schools use in India for exactly that reason.
+ *
+ * One accent hue, used sparingly, means an action rendered in blue is
+ * unambiguously THE action on the page. Adding a second brand colour would
+ * dilute that immediately.
+ *
+ * Light-only, deliberately: no dark mode. Every screen is designed against
+ * white, and a half-considered dark variant is worse than none. Revisit when
+ * there is a real user asking.
+ */
+@theme {
+  /* --- Blue ramp -------------------------------------------------------- */
+  /* 600 is the action colour; 700 its hover. Both clear 4.5:1 on white. */
+  --color-brand-50: #eff6ff;
+  --color-brand-100: #dbeafe;
+  --color-brand-200: #bfdbfe;
+  --color-brand-300: #93c5fd;
+  --color-brand-400: #60a5fa;
+  --color-brand-500: #3b82f6;
+  --color-brand-600: #2563eb;
+  --color-brand-700: #1d4ed8;
+  --color-brand-800: #1e40af;
+  --color-brand-900: #1e3a8a;
+  --color-brand-950: #172554;
+
+  /* --- Neutrals --------------------------------------------------------- */
+  /* Slate rather than pure grey: it carries a trace of blue, so text and
+     surfaces sit with the accent instead of fighting it. */
+  --color-ink-50: #f8fafc;
+  --color-ink-100: #f1f5f9;
+  --color-ink-200: #e2e8f0;
+  --color-ink-300: #cbd5e1;
+  --color-ink-400: #94a3b8;
+  --color-ink-500: #64748b;
+  --color-ink-600: #475569;
+  --color-ink-700: #334155;
+  --color-ink-800: #1e293b;
+  --color-ink-900: #0f172a;
+
+  /* --- Status ----------------------------------------------------------- */
+  --color-success-50: #ecfdf5;
+  --color-success-600: #059669;
+  --color-success-700: #047857;
+  --color-warning-50: #fffbeb;
+  --color-warning-600: #d97706;
+  --color-danger-50: #fef2f2;
+  --color-danger-600: #dc2626;
+  --color-danger-700: #b91c1c;
+
+  /* --- Type ------------------------------------------------------------- */
+  --font-sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto,
+    "Helvetica Neue", Arial, "Noto Sans", sans-serif;
+
+  /* A ~1.25 modular scale. Constrained on purpose — a handful of sizes used
+     consistently reads as designed; twelve arbitrary ones read as accidental. */
+  --text-xs: 0.75rem;
+  --text-sm: 0.875rem;
+  --text-base: 1rem;
+  --text-lg: 1.125rem;
+  --text-xl: 1.25rem;
+  --text-2xl: 1.5rem;
+  --text-3xl: 1.875rem;
+  --text-4xl: 2.25rem;
+  --text-5xl: 3rem;
+  --text-6xl: 3.75rem;
+
+  /* --- Radius ----------------------------------------------------------- */
+  --radius-sm: 0.375rem;
+  --radius-md: 0.5rem;
+  --radius-lg: 0.75rem;
+  --radius-xl: 1rem;
+  --radius-2xl: 1.25rem;
+
+  /* --- Elevation -------------------------------------------------------- */
+  /* Tinted with the brand hue rather than black. Neutral-black shadows on a
+     blue-tinted surface look muddy; a blue-tinted shadow reads as clean depth. */
+  --shadow-xs: 0 1px 2px 0 rgb(15 23 42 / 0.04);
+  --shadow-sm: 0 1px 3px 0 rgb(15 23 42 / 0.07), 0 1px 2px -1px rgb(15 23 42 / 0.05);
+  --shadow-md: 0 4px 12px -2px rgb(15 23 42 / 0.08), 0 2px 6px -2px rgb(15 23 42 / 0.05);
+  --shadow-lg: 0 12px 28px -6px rgb(15 23 42 / 0.12), 0 4px 10px -4px rgb(15 23 42 / 0.06);
+  --shadow-brand: 0 8px 24px -6px rgb(37 99 235 / 0.28);
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+/* --- Base ---------------------------------------------------------------- */
+html {
+  -webkit-text-size-adjust: 100%;
+  scroll-behavior: smooth;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background-color: #ffffff;
+  color: var(--color-ink-800);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Headings carry the darkest ink and tight tracking; body text stays a step
+   lighter. The contrast between the two is what creates hierarchy without
+   needing more type sizes. */
+h1, h2, h3, h4 {
+  color: var(--color-ink-900);
+  letter-spacing: -0.02em;
+  text-wrap: balance;
+}
+
+p {
+  text-wrap: pretty;
+}
+
+/* A single visible focus treatment everywhere. Browser defaults vary and are
+   often invisible against a blue button; keyboard users need one consistent,
+   obvious indicator. */
+:focus-visible {
+  outline: 2px solid var(--color-brand-600);
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+
+/* Respect a user's reduced-motion setting rather than overriding it. */
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* --- Utilities ----------------------------------------------------------- */
+
+/* The soft blue wash behind hero and section breaks. Kept as a utility so the
+   gradient is defined once rather than re-typed with slightly different stops. */
+.bg-brand-wash {
+  background-image:
+    radial-gradient(60rem 30rem at 10% -10%, var(--color-brand-100), transparent 60%),
+    radial-gradient(45rem 25rem at 95% 0%, var(--color-brand-50), transparent 55%);
+}
+
+/* Subtle grid, for the hero only. Low-contrast on purpose: it should register
+   as texture, not decoration competing with the headline. */
+.bg-grid {
+  background-image:
+    linear-gradient(to right, rgb(37 99 235 / 0.05) 1px, transparent 1px),
+    linear-gradient(to bottom, rgb(37 99 235 / 0.05) 1px, transparent 1px);
+  background-size: 3rem 3rem;
+}
+
+/* For screen-reader-only labels — an accessible name where a visible one would
+   clutter the layout. */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
 }

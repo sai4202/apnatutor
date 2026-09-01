@@ -9,7 +9,7 @@
 | Milestone | Tasks | Done |
 |---|---|---|
 | M0 — Foundation | 12 | 12 ☑ |
-| M1 — Accounts, profiles & trust | 12 | 3 ☑, 3 ▶ |
+| M1 — Accounts, profiles & trust | 12 | 4 ☑, 3 ▶ |
 | M2 — Discovery & SEO | 8 | 0 |
 | M3 — Requirements & the lead loop | 11 | 0 |
 | M4 — Credits & payments | 8 | 0 |
@@ -93,13 +93,13 @@ Complete 2026-08-31, commit `02208c3`.
 - ☐ `M1-05.3` Ownership checks — nothing is owned yet; lands with profiles in `M1-07`/`M1-08`
 - ▶ `M1-05.4` Tests: unauthenticated and tampered-token cases done. Student-vs-tutor separation waits for the first role-restricted endpoint.
 
-### ☐ `M1-06` Catalog schema & seed *(moved from M2 — see corrections above)*
-- ☐ `M1-06.1` `V3__catalog.sql` — `subjects` (self-referencing tree), `boards`, `grade_levels`, `locations`
-- ☐ `M1-06.2` Seed subject taxonomy: Academics → Class N Tuition → Subject; Exam Prep → JEE/NEET/CAT/UPSC; Languages; Music; Computers
-- ☐ `M1-06.3` Seed boards (CBSE, ICSE, IB, IGCSE, State) and grades (Nursery–12, UG, PG, Competitive)
-- ☐ `M1-06.4` Seed locations — depth depends on the launch city (**open question, PENDING.md**)
-- ☐ `M1-06.5` Unique slugs on subjects and locations — these become SEO URLs, so they are effectively permanent
-- ☐ `M1-06.6` Read-only catalog endpoints under `/api/v1/public/catalog`
+### ☑ `M1-06` Catalog schema & seed *(moved from M2 — see corrections above)*
+- ☑ `M1-06.1` `V4__catalog.sql` — `subjects` (self-referencing tree), `boards`, `grade_levels`, `locations`
+- ☑ `M1-06.2` Seed subject taxonomy — **70 subjects across 7 categories**: School Tuition, Exam Preparation, Languages, Computers & IT, Music & Dance, Study Abroad Tests, Hobbies & Sports
+- ☑ `M1-06.3` Seed 10 boards (CBSE, ICSE, 5 state boards, IB, IGCSE, NIOS) and 19 grade levels
+- ▶ `M1-06.4` Seed locations — 10 cities live; Hyderabad 20 localities, Bengaluru 14, others shallow. **Depth still pending decision D1**; deliberately shallow elsewhere because empty city×subject pages are an SEO liability (`M2-08.4`).
+- ☑ `M1-06.5` Unique slugs on subjects and locations, chosen to read naturally in a URL
+- ☑ `M1-06.6` Read-only catalog endpoints under `/api/v1/public/catalog`, cached 6h
 
 ### ☐ `M1-07` Student profile
 - ☐ `M1-07.1` `V4__profiles.sql` — `student_profiles`
