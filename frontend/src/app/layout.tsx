@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import { SiteHeader } from "@/components/SiteHeader";
 import { SiteFooter } from "@/components/SiteFooter";
+import { AuthProvider } from "@/lib/auth";
 
 // SEO is this product's primary acquisition channel (SOURCE_OF_TRUTH ADR #3),
 // so metadata is set up properly from the start rather than bolted on at M6.
@@ -47,11 +48,16 @@ export default function RootLayout({
           Skip to content
         </a>
 
-        <SiteHeader />
-        <main id="main" className="flex-1">
-          {children}
-        </main>
-        <SiteFooter />
+        {/* The provider is a Client Component, but everything inside it stays a
+            Server Component — children are passed through, not re-rendered on
+            the client. The public pages keep shipping zero JavaScript. */}
+        <AuthProvider>
+          <SiteHeader />
+          <main id="main" className="flex-1">
+            {children}
+          </main>
+          <SiteFooter />
+        </AuthProvider>
       </body>
     </html>
   );

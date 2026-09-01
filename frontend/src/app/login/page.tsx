@@ -2,7 +2,9 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { API_BASE_URL } from "@/lib/api";
+import { useAuth } from "@/lib/auth";
 import { Button, Container, Icon } from "@/components/ui";
 
 /**
@@ -42,6 +44,8 @@ interface ApiErrorBody {
 }
 
 export default function LoginPage() {
+  const { signIn } = useAuth();
+  const router = useRouter();
   const [step, setStep] = useState<Step>("phone");
   const [phone, setPhone] = useState("");
   const [code, setCode] = useState("");
@@ -123,7 +127,17 @@ export default function LoginPage() {
         setError(friendly[err.code] ?? err.message);
         return;
       }
+
+      // Hand the token to the provider rather than holding it here. It lives in
+      // memory only; a reload re-obtains one from the HttpOnly refresh cookie.
+      signIn(body.accessToken, body.user);
       setSignedInAs(body.user.phone);
+
+      // Straight to where they can actually do something. A tutor's next step is
+      // their profile; a student's is posting a requirement.
+      router.replace(
+        body.user.role === "TUTOR" ? "/tutor/dashboard" : "/post-requirement",
+      );
     } catch {
       setError("Could not reach the server. Is the backend running?");
     } finally {
@@ -144,10 +158,7 @@ export default function LoginPage() {
           <p className="mt-2 text-ink-600">
             Signed in as <span className="font-semibold">{signedInAs}</span>
           </p>
-          <p className="mt-6 rounded-xl bg-brand-50 p-4 text-sm text-brand-800 ring-1 ring-brand-200">
-            Your dashboard is built in M1-12. The session is real — the refresh
-            token is set as an HttpOnly cookie.
-          </p>
+          <p className="mt-6 text-sm text-ink-500">Taking you to your dashboard…</p>
           <Link
             href="/"
             className="mt-6 inline-flex items-center gap-1.5 font-semibold text-brand-600 hover:text-brand-700"

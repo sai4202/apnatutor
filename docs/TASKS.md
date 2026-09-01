@@ -133,20 +133,22 @@ Complete 2026-08-31, commit `02208c3`.
 - ☑ `M1-10.5` Badges and level on the public profile response
 - ☑ `M1-10.6` `levelFor()` returns `ID_VERIFIED` — the hook M4 needs for the signup bonus
 
-### ☐ `M1-11` Frontend — auth
-- ☐ `M1-11.1` Phone entry + OTP screens, resend cooldown
-- ☐ `M1-11.2` Role choice at signup (Student/Parent vs Tutor)
-- ☐ `M1-11.3` Session handling, silent refresh, logout
-- ☐ `M1-11.4` Route protection + role-based redirects
-- ☐ `M1-11.5` Error states driven by `ErrorCode`, never by message text
+### ▶ `M1-11` Frontend — auth
+- ☑ `M1-11.1` Phone entry + OTP screens
+- ☑ `M1-11.2` Role choice at signup (Student/Parent vs Tutor)
+- ☑ `M1-11.3` `AuthProvider` — access token **in memory only**, refresh-on-load from the HttpOnly cookie, `authFetch` with one automatic refresh-and-retry on 401
+- ☑ `M1-11.4` `RequireRole` guard + role-based redirect after sign-in
+- ☑ `M1-11.5` Error states driven by `ErrorCode`, never message text
+- ☐ `M1-11.6` Resend cooldown on the OTP screen
 
-### ☐ `M1-12` Frontend — profiles
-- ☐ `M1-12.1` Tutor onboarding wizard, resumable, with completeness meter
-- ☐ `M1-12.2` Subject/grade/board picker against the catalog
-- ☐ `M1-12.3` Location + travel radius picker
-- ☐ `M1-12.4` Photo and document upload with preview
-- ☐ `M1-12.5` Profile editor
-- ☐ `M1-12.6` Student profile screen
+### ▶ `M1-12` Frontend — profiles
+- ☑ `M1-12.1` Tutor onboarding wizard — steps are tabs rather than a forced sequence, each saves on its own, server-driven completeness meter
+- ☑ `M1-12.2` Subject picker against the live catalog
+- ☑ `M1-12.3` Location + travel radius picker
+- ☑ `M1-12.4` Photo upload with preview; ID and education document upload on the dashboard
+- ☑ `M1-12.5` Profile editing — the wizard *is* the editor, so there is one place a profile is changed rather than two that can diverge
+- ☐ `M1-12.6` Student profile screen — backend done (`M1-07`), UI pending
+- ☑ `M1-12.7` Tutor dashboard with verification status *(added — not in the original breakdown)*
 
 ---
 

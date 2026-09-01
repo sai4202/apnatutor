@@ -11,9 +11,9 @@
 
 Read this first when resuming. Keep it to exactly three, always current.
 
-1. `M1-12` **tutor onboarding wizard** — the whole M1 backend is currently reachable only through Swagger. This is what makes it usable: a resumable multi-step form driven by the completeness score and the "what's missing" list the API already returns.
-2. `M1-11.3`/`M1-11.4` — a shared auth provider doing refresh-on-load, and route protection. The login screen works but the session does not survive a reload.
-3. Then **M2**: tutor search (`M2-01`), indexes verified with `EXPLAIN ANALYZE` (`M2-02`), and the contact-masking tests (`M2-03.3`) — the highest-consequence bug class in the product.
+1. `M2-01` **tutor search** — the query builder with all filters, sorting and pagination. Everything it needs now exists: published profiles, subjects, locations, fees, ratings.
+2. `M2-03` **contact masking**, with `M2-03.3` the priority: tests asserting no unmasked contact detail can appear in any public response. The highest-consequence bug class in the product — a leak here removes the business model rather than degrading it.
+3. `M2-02` index work verified with `EXPLAIN ANALYZE`, then `M2-05` wiring the real search into the `/tutors` page that currently shows an honest empty state.
 
 Full breakdown in [TASKS.md](./TASKS.md); open decisions and debt in [PENDING.md](./PENDING.md).
 
@@ -283,6 +283,26 @@ Tested that an ID document is unreachable publicly (404, not 403 — a 403 confi
 **Student profiles** are deliberately thin — name and location, both optional. Nothing is required before posting a requirement, because the requirement itself carries subject, budget and area. Every field asked for earlier is a chance to abandon the funnel.
 
 > **Caught while writing tests:** I had defined a no-op `ResultMatcher` named `content()` at the bottom of the verification test, which would have made those assertions silently pass. A test that cannot fail is worse than no test — it reports safety that was never checked.
+
+### 2026-09-01 — M1-11 / M1-12: the frontend that makes M1 usable
+
+Everything built so far was reachable only through Swagger. This is the part a tutor actually touches.
+
+**`AuthProvider`.** The access token lives in React state and nowhere else — not `localStorage`, not `sessionStorage`, because anything readable by JavaScript is readable by a successful XSS, and a bearer token *is* the user. The refresh token is already an HttpOnly cookie, so a reload calls `/auth/refresh` rather than reading a stored credential. That is the whole reason the backend was built this way. The cost is a brief loader on full page loads; the alternative is persisting a credential where script can reach it.
+
+`authFetch` retries **once** after refreshing on a 401. Access tokens last 15 minutes, so a mid-session 401 is expected rather than exceptional.
+
+**`RequireRole` is a UX affordance, not a security control** — anyone can edit client state. Enforcement is the backend's `@PreAuthorize` on every endpoint. Its loading branch matters more than it looks: redirecting before the initial refresh settles would bounce a signed-in user to the login screen on every reload.
+
+**The onboarding wizard is server-driven.** It renders the `profileCompleteness` score and the plain-language `missingForPublish` list the API already returns, rather than keeping its own idea of "complete" — two definitions would drift, and the one the publish endpoint enforces is the one that counts.
+
+**Each step saves on its own**, rather than one long form submitted at the end. Filling in a tutor profile is genuinely long, will be done on a phone, and will be interrupted; losing twenty minutes of typing to a dropped connection is how a half-finished profile becomes an abandoned one. The profile therefore exists in a partial state throughout — safe, because nothing is visible until `publish`, which the backend refuses below 60%.
+
+Steps are **tabs, not a forced sequence**: a tutor who only wants to change their fees should not walk through four other screens. The wizard is also the editor, so a profile is changed in one place rather than two that can diverge.
+
+**The dashboard shows zeroes nowhere.** A "0 enquiries" counter reads as *nobody wants you* rather than *not built yet*, and that difference matters to someone deciding whether to finish their profile. The lead feed placeholder says what it is and when it arrives.
+
+**Caught during verification:** the running backend predated M1-07 through M1-10, so the first live check 404'd on every profile route. Restarted, migrations applied to v7, and the path re-verified — profile created at 0%, basics raising it to 25%, `missingForPublish` populated.
 
 ---
 
