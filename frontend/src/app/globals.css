@@ -46,6 +46,16 @@
   --color-ink-800: #1e293b;
   --color-ink-900: #0f172a;
 
+  /* --- Canvas ----------------------------------------------------------- */
+  /* The page ground the panels sit on.
+     Deliberately NOT ink-50 (#f8fafc), which was the first attempt: it is barely
+     a shade off white, so white panels had nothing to sit against and the whole
+     page still read as flat white. This is a blue-grey with enough weight to be
+     unmistakably a background, while staying light enough that dark text on a
+     white panel keeps its full contrast. */
+  --color-canvas: #e6edf7;
+  --color-canvas-deep: #dce6f4;
+
   /* --- Status ----------------------------------------------------------- */
   --color-success-50: #ecfdf5;
   --color-success-600: #059669;
@@ -109,9 +119,18 @@
   }
 
   body {
-    /* A faint neutral ground rather than pure white, so the white panels laid
-       on top of it read as raised surfaces instead of dissolving into the page. */
-    background-color: var(--color-ink-50);
+    /* A blue-grey ground with real weight, so white panels read as raised
+       surfaces rather than dissolving into the page.
+       The gradient is very slight — it stops a large flat field looking like
+       dead space, without becoming a feature in its own right. */
+    background-color: var(--color-canvas);
+    background-image: linear-gradient(
+      to bottom,
+      var(--color-canvas) 0%,
+      var(--color-canvas-deep) 60%,
+      var(--color-canvas) 100%
+    );
+    background-attachment: fixed;
     color: var(--color-ink-800);
     font-family: var(--font-sans);
     -webkit-font-smoothing: antialiased;
@@ -249,11 +268,8 @@
    it replaced: grey next to a blue page reads as dirty, a blue-grey reads as
    part of the same system. */
 .bg-section-tint {
-  background-image: linear-gradient(
-    to bottom,
-    rgb(239 246 255 / 0.9),
-    rgb(248 250 252 / 0.9)
-  );
+  background-color: #eff5ff;
+  background-image: linear-gradient(to bottom, #eaf2ff, #f4f8ff);
 }
 
 /* --- Section panels -------------------------------------------------------
@@ -273,6 +289,12 @@
 .panel {
   border-radius: 1.5rem;
   overflow: hidden;
+  /* A soft shadow so panels sit ON the ground rather than being holes cut into
+     it. Tinted with the brand hue: a neutral-black shadow over a blue-grey
+     canvas goes muddy. */
+  box-shadow:
+    0 1px 2px rgb(30 58 138 / 0.04),
+    0 8px 24px -8px rgb(30 58 138 / 0.10);
 }
 
 @media (min-width: 640px) {

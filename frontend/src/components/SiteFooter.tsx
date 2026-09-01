@@ -70,7 +70,10 @@ function FooterColumn({
 
 export function SiteFooter() {
   return (
-    <footer className="mt-6 border-t border-ink-200 bg-white">
+    /* No background of its own — it sits directly on the page canvas, which
+       reads as "outside the content" and keeps the panels above it as the only
+       white surfaces. */
+    <footer className="mt-6 border-t border-ink-300/70">
       <Container className="py-14">
         <div className="grid gap-10 sm:grid-cols-2 lg:grid-cols-5">
           <div className="lg:col-span-1">
@@ -101,7 +104,7 @@ export function SiteFooter() {
           <FooterColumn title="Legal" links={LEGAL} />
         </div>
 
-        <div className="mt-12 flex flex-col gap-3 border-t border-ink-200 pt-8 sm:flex-row sm:items-center sm:justify-between">
+        <div className="mt-12 flex flex-col gap-3 border-t border-ink-300/70 pt-8 sm:flex-row sm:items-center sm:justify-between">
           <p className="text-sm text-ink-500">
             © {new Date().getFullYear()} ApnaTutor. Made in India.
           </p>

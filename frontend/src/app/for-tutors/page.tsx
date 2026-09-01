@@ -67,8 +67,8 @@ const FAIRNESS = [
 export default function ForTutorsPage() {
   return (
     <>
-      <section className="border-b border-ink-200 bg-brand-wash py-16 sm:py-20">
-        <Container>
+      <Container className="pt-5 sm:pt-6">
+        <section className="panel bg-brand-wash px-6 py-14 sm:px-10 sm:py-16">
           <div className="max-w-2xl">
             <h1 className="text-4xl font-bold leading-tight sm:text-5xl">
               Students in your area are{" "}
@@ -88,11 +88,14 @@ export default function ForTutorsPage() {
               </ButtonLink>
             </div>
           </div>
-        </Container>
-      </section>
+        </section>
+      </Container>
 
-      <section id="how" className="py-16 sm:py-20">
-        <Container>
+      <Container className="pt-5 sm:pt-6">
+        <section
+          id="how"
+          className="panel bg-white px-6 py-14 ring-1 ring-ink-200/70 sm:px-10 sm:py-16"
+        >
           <SectionHeading
             eyebrow="How it works"
             title="Free to join. Pay only for leads you want."
@@ -117,11 +120,11 @@ export default function ForTutorsPage() {
               </Card>
             ))}
           </div>
-        </Container>
-      </section>
+        </section>
+      </Container>
 
-      <section className="border-y border-ink-200 bg-ink-50 py-16 sm:py-20">
-        <Container>
+      <Container className="pt-5 sm:pt-6">
+        <section className="panel bg-section-tint px-6 py-14 ring-1 ring-brand-100 sm:px-10 sm:py-16">
           <SectionHeading
             eyebrow="Fair by design"
             title="We would rather send you five good leads than fifty bad ones"
@@ -140,12 +143,11 @@ export default function ForTutorsPage() {
               </div>
             ))}
           </div>
-        </Container>
-      </section>
+        </section>
+      </Container>
 
-      <section className="py-16 sm:py-20">
-        <Container>
-          <div className="rounded-2xl bg-brand-600 p-10 text-center sm:p-14">
+      <Container className="py-5 sm:py-6">
+        <div className="panel bg-brand-600 p-10 text-center sm:p-14">
             <h2 className="text-3xl font-bold text-white">
               Start teaching with ApnaTutor
             </h2>
@@ -162,9 +164,8 @@ export default function ForTutorsPage() {
               Create your free profile
               <Icon name="arrow" className="h-5 w-5" />
             </ButtonLink>
-          </div>
-        </Container>
-      </section>
+        </div>
+      </Container>
     </>
   );
 }

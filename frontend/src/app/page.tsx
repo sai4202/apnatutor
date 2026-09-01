@@ -191,7 +191,10 @@ export default async function Home() {
             {STEPS.map((step, index) => (
               <div
                 key={step.title}
-                className="rounded-2xl bg-ink-50 p-7 ring-1 ring-ink-200/60"
+                /* brand-50, not ink-50: a near-white card on a white panel is
+                   invisible. A soft blue tint separates the two and keeps the
+                   page on one hue. */
+                className="rounded-2xl bg-brand-50 p-7 ring-1 ring-brand-100"
               >
                 <div className="flex items-center gap-3">
                   <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-brand-600 text-white">
@@ -242,7 +245,7 @@ export default async function Home() {
                       <li key={child.slug}>
                         <Link
                           href={`/tutors?q=${child.slug}`}
-                          className="inline-block rounded-lg bg-ink-50 px-3 py-1.5 text-sm text-ink-700 ring-1 ring-ink-200 transition-colors hover:bg-brand-50 hover:text-brand-700 hover:ring-brand-200"
+                          className="inline-block rounded-lg bg-white px-3 py-1.5 text-sm text-ink-700 ring-1 ring-ink-200 transition-colors hover:bg-brand-50 hover:text-brand-700 hover:ring-brand-300"
                         >
                           {child.name}
                         </Link>
@@ -324,7 +327,7 @@ export default async function Home() {
                 <Link
                   key={city.slug}
                   href={`/tutors/${city.slug}`}
-                  className="group flex flex-col items-center gap-2.5 rounded-2xl bg-ink-50 px-3 py-5 text-center ring-1 ring-ink-200/60 transition-all hover:-translate-y-0.5 hover:bg-white hover:shadow-md hover:ring-brand-300"
+                  className="group flex flex-col items-center gap-2.5 rounded-2xl bg-brand-50 px-3 py-5 text-center ring-1 ring-brand-100 transition-all hover:-translate-y-0.5 hover:bg-white hover:shadow-md hover:ring-brand-300"
                 >
                   <span className="text-ink-400 transition-colors group-hover:text-brand-600">
                     <CityIcon slug={city.slug} className="h-8 w-8" />
