@@ -9,7 +9,7 @@
 | Milestone | Tasks | Done |
 |---|---|---|
 | M0 — Foundation | 12 | 12 ☑ |
-| M1 — Accounts, profiles & trust | 12 | 5 ☑, 4 ▶ |
+| M1 — Accounts, profiles & trust | 12 | 6 ☑, 4 ▶ |
 | M2 — Discovery & SEO | 8 | 2 ▶ (frontend built ahead of the API) |
 | M3 — Requirements & the lead loop | 11 | 0 |
 | M4 — Credits & payments | 8 | 0 |
@@ -106,24 +106,24 @@ Complete 2026-08-31, commit `02208c3`.
 - ☐ `M1-07.2` Create-on-first-login, read, update endpoints
 - ☐ `M1-07.3` Tests
 
-### ▶ `M1-08` Tutor profile
+### ☑ `M1-08` Tutor profile
 - ☑ `M1-08.1` `V6__profiles.sql` — `tutor_profiles`, `tutor_subjects`, `tutor_locations`, `tutor_qualifications`
 - ☑ `M1-08.2` Core CRUD — bio, photo, gender, experience, languages, demo, availability
 - ☑ `M1-08.3` Fees in **paise** as `BIGINT`, with unit and negotiable flag
 - ☑ `M1-08.4` Subject selection with per-subject grades and boards; categories rejected as unteachable
 - ☑ `M1-08.5` Teaching modes + serviceable locations + travel radius
-- ▶ `M1-08.6` Qualifications — add/remove done; **document upload waits on `M1-09`** file storage
+- ☑ `M1-08.6` Qualifications — add, remove, and document upload (private, admin-readable only)
 - ☑ `M1-08.7` Completeness scoring, weighted by what a parent decides on, plus a plain-language "what's missing" list
 - ☑ `M1-08.8` Publish / unpublish — refuses below 60%, and auto-unpublishes if an edit drops it below
 - ☑ `M1-08.9` Tests — 7 unit + 10 integration
 
-### ☐ `M1-09` File storage
-- ☐ `M1-09.1` `FileStorage` interface + `LocalFileStorage`, provider chosen by config
-- ☐ `M1-09.2` Upload endpoint with size + **content-sniffed** MIME validation (never trust the extension)
-- ☐ `M1-09.3` Sanitised, non-guessable stored filenames
-- ☐ `M1-09.4` Serve endpoint — **ID documents must be admin-only, never publicly addressable**
-- ☐ `M1-09.5` Image resize/compress for profile photos
-- ☐ `M1-09.6` Tests including a malicious-filename case
+### ▶ `M1-09` File storage
+- ☑ `M1-09.1` `FileStorage` interface + `LocalFileStorage`, provider chosen by config
+- ☑ `M1-09.2` Upload endpoints with per-kind size caps and **magic-byte type detection** — the declared type and filename are never consulted
+- ☑ `M1-09.3` Uploaded filenames discarded entirely; stored as `kind/uuid.ext`
+- ☑ `M1-09.4` Split serving: `/public/files/**` serves public kinds only (404, not 403, for anything else); `/admin/files/**` is the sole route to an ID or education document
+- ☐ `M1-09.5` Image resize/compress for profile photos — deferred; a 5 MB cap is holding for now, and this is a cost optimisation rather than a correctness one
+- ☑ `M1-09.6` Tests — 16, covering disguised HTML, SVG, PHP, five path-traversal shapes, size caps and per-kind type rules
 
 ### ☐ `M1-10` Verification
 - ☐ `M1-10.1` `V5__verification.sql` — `verifications`

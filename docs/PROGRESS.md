@@ -11,9 +11,9 @@
 
 Read this first when resuming. Keep it to exactly three, always current.
 
-1. `M1-09` **file storage** — `FileStorage` interface + local-disk impl, photo and document upload with content-sniffed MIME validation, sanitised filenames. Unblocks `M1-08.6` (qualification documents) and the profile photo, which is the last thing standing between a complete profile and 100%.
-2. `M1-10` verification ladder — submit ID and education documents, admin approve/reject, `verification_level` derivation, badges on the public profile.
-3. `M1-07.2` student profile endpoints, then `M1-11`/`M1-12` — the frontend auth screens and tutor onboarding wizard that drive all of this.
+1. `M1-10` **verification ladder** — `verifications` table, ID and education document submission, admin approve/reject queue, `verification_level` derivation, badges on the public profile. File storage is in place, so this is unblocked.
+2. `M1-07.2` student profile endpoints — small, and the last backend piece of M1.
+3. `M1-11` / `M1-12` — frontend auth screens and the tutor onboarding wizard. The whole M1 backend is now reachable only through Swagger; the wizard is what makes it usable.
 
 Full breakdown in [TASKS.md](./TASKS.md); open decisions and debt in [PENDING.md](./PENDING.md).
 
@@ -247,6 +247,24 @@ The first tile grid drew the *category* icon on every tile, so Mathematics, Phys
 Languages get their **native script** — అ for Telugu, அ for Tamil, ॐ for Sanskrit — rather than twelve identical speech bubbles, which was the same failure in miniature. Set as text, so they stay correct at any size and need no path tracing. Tiles also shift tone by position, since five tiles in an identical shade still read as one block of colour.
 
 Second: the page rendered only the first three categories, which silently hid Music & Dance, Study Abroad Tests and Hobbies & Sports — half of what the platform offers, invisible on the page whose job is to show what the platform offers. Now renders every category.
+
+### 2026-09-01 — M1-09 file storage
+
+**79 tests pass**, up from 63. Sixteen of the new ones are this module, and almost all are attack cases — which is what the module is for.
+
+**The type comes from the bytes, never the upload.** Both the filename and the browser-supplied `Content-Type` are attacker-controlled. Anyone can name a file `photo.jpg`, declare it `image/jpeg`, and upload HTML — and if that is served back from our own domain it executes with our origin's privileges. That is stored XSS with an upload form as the delivery mechanism. `ContentTypeDetector` reads magic bytes and rejects anything unrecognised rather than guessing.
+
+**SVG is deliberately unsupported.** It is XML, it can contain `<script>`, and it has no fixed magic number — there is no safe way to accept one without a sanitising parser, and a profile photo does not need vector graphics.
+
+**Uploaded filenames are discarded entirely.** Stored as `kind/uuid.ext`, with the extension derived from the detected type. Nothing the uploader chose reaches the filesystem: no null byte, no unicode direction override, no second extension, no deliberate collision.
+
+**Path traversal has two independent defences** — a strict key pattern, and a check that the resolved path is still inside the storage root. Not redundant: the pattern is the intent, the containment check is the guarantee that still holds if someone later loosens the pattern without understanding why it was tight. Five traversal shapes are tested against a real file planted outside the root.
+
+**Public and private files can never share a serving path.** The kind is encoded in the storage key's own directory, so `/public/files/**` refuses anything not marked public without a database lookup — access control that needs a lookup is access control that can be skipped. It returns **404 rather than 403**, because a 403 would confirm that a given ID document exists.
+
+Private files are served `no-store`; public photos cache for 30 days and are immutable, since the key changes when the photo does. Both carry `X-Content-Type-Options: nosniff` and a `sandbox` CSP.
+
+`M1-09.5` (image resize) is deferred — the 5 MB cap is holding, and it is a bandwidth optimisation rather than a correctness one.
 
 ---
 
