@@ -26,6 +26,16 @@ import { Button, Container, Icon } from "@/components/ui";
 type Step = "phone" | "code";
 type Role = "STUDENT" | "TUTOR";
 
+/**
+ * Seeded by the backend only when `apnatutor.dev.enabled` is true. Admin is
+ * listed for completeness — the admin console is M5-06.
+ */
+const TEST_ACCOUNTS: { label: string; phone: string; role: Role }[] = [
+  { label: "Student / Parent", phone: "9999900001", role: "STUDENT" },
+  { label: "Tutor", phone: "9999900002", role: "TUTOR" },
+  { label: "Admin", phone: "9999900003", role: "STUDENT" },
+];
+
 interface ApiErrorBody {
   code: string;
   message: string;
@@ -39,6 +49,8 @@ export default function LoginPage() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [signedInAs, setSignedInAs] = useState<string | null>(null);
+  /** Non-null only when the backend is running in dev mode. */
+  const [devCode, setDevCode] = useState<string | null>(null);
 
   async function call(path: string, body: unknown): Promise<Response> {
     return fetch(`${API_BASE_URL}${path}`, {
@@ -50,21 +62,29 @@ export default function LoginPage() {
     });
   }
 
-  async function requestCode(event: React.FormEvent) {
+  async function requestCode(event: React.FormEvent, overridePhone?: string) {
     event.preventDefault();
+    const target = overridePhone ?? phone;
     setBusy(true);
     setError(null);
     try {
-      const res = await call("/auth/otp/request", { phone });
+      const res = await call("/auth/otp/request", { phone: target });
+      const body = await res.json();
       if (!res.ok) {
-        const body = (await res.json()) as ApiErrorBody;
+        const err = body as ApiErrorBody;
         // Branch on `code`, never on `message` — messages get reworded.
         setError(
-          body.code === "OTP_SEND_LIMIT_EXCEEDED"
+          err.code === "OTP_SEND_LIMIT_EXCEEDED"
             ? "Too many codes requested. Please try again in an hour."
-            : body.message,
+            : err.message,
         );
         return;
+      }
+      // Present only when the backend is in dev mode. In any real deployment
+      // this field is absent from the JSON entirely.
+      if (typeof body.devCode === "string") {
+        setCode(body.devCode);
+        setDevCode(body.devCode);
       }
       setStep("code");
     } catch {
@@ -72,6 +92,17 @@ export default function LoginPage() {
     } finally {
       setBusy(false);
     }
+  }
+
+  /** Fills a seeded test account and immediately requests its code. */
+  function useTestAccount(
+    event: React.MouseEvent,
+    testPhone: string,
+    testRole: Role,
+  ) {
+    setPhone(testPhone);
+    setRole(testRole);
+    void requestCode(event as unknown as React.FormEvent, testPhone);
   }
 
   async function verifyCode(event: React.FormEvent) {
@@ -151,6 +182,16 @@ export default function LoginPage() {
             </div>
           )}
 
+          {step === "code" && devCode && (
+            <div className="mt-5 rounded-lg bg-warning-50 px-4 py-3 text-sm text-ink-700 ring-1 ring-warning-600/20">
+              <span className="font-semibold">Dev mode:</span> your code is{" "}
+              <span className="font-mono text-base font-bold">{devCode}</span>
+              <span className="mt-0.5 block text-xs text-ink-500">
+                Filled in for you. This never appears in production.
+              </span>
+            </div>
+          )}
+
           {step === "phone" ? (
             <form onSubmit={requestCode} className="mt-6 space-y-5">
               <div>
@@ -182,6 +223,34 @@ export default function LoginPage() {
               <Button type="submit" size="lg" className="w-full" disabled={busy}>
                 {busy ? "Sending…" : "Send code"}
               </Button>
+
+              {/* Seeded test accounts. The backend only creates these when
+                  apnatutor.dev.enabled is true, and DevModeGuard refuses to
+                  start if that is set with a real SMS provider. */}
+              <div className="rounded-xl bg-ink-50 p-4 ring-1 ring-ink-200">
+                <p className="text-xs font-semibold uppercase tracking-wider text-ink-500">
+                  Test accounts — no SMS needed
+                </p>
+                <div className="mt-3 space-y-1.5">
+                  {TEST_ACCOUNTS.map((account) => (
+                    <button
+                      key={account.phone}
+                      type="button"
+                      disabled={busy}
+                      onClick={(e) => useTestAccount(e, account.phone, account.role)}
+                      className="flex w-full items-center justify-between rounded-lg bg-white px-3 py-2.5 text-left text-sm ring-1 ring-ink-200 transition-colors hover:bg-brand-50 hover:ring-brand-300 disabled:opacity-50"
+                    >
+                      <span className="font-medium text-ink-800">{account.label}</span>
+                      <span className="font-mono text-xs text-ink-500">
+                        {account.phone}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+                <p className="mt-3 text-xs text-ink-500">
+                  Code for all three: <span className="font-mono font-semibold">123456</span>
+                </p>
+              </div>
             </form>
           ) : (
             <form onSubmit={verifyCode} className="mt-6 space-y-5">

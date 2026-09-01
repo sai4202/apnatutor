@@ -66,31 +66,54 @@ export default async function Home() {
   ]);
 
   const categories = subjectTree.slice(0, 6);
+  const totalSubjects = subjectTree.reduce(
+    (sum, category) => sum + category.children.length,
+    0,
+  );
 
   return (
     <>
       {/* ---------------------------------------------------------------- */}
       {/* Hero                                                              */}
       {/* ---------------------------------------------------------------- */}
-      <section className="relative overflow-hidden bg-brand-wash">
-        <div className="absolute inset-0 bg-grid opacity-60" aria-hidden="true" />
-        {/* Fades the grid into the white page below so the section does not
-            end on a hard line. */}
+      {/*
+        Layered, in order: aurora colour fields, a masked dot field, two blurred
+        orbs, film grain, then content. Each layer is close to invisible alone;
+        together they give the white page depth without anything competing with
+        the headline.
+      */}
+      <section className="noise relative overflow-hidden bg-aurora">
+        <div className="absolute inset-0 bg-dots" aria-hidden="true" />
         <div
-          className="absolute inset-x-0 bottom-0 h-32 bg-gradient-to-b from-transparent to-white"
+          className="orb -left-24 top-[-6rem] h-80 w-80 bg-brand-400/25"
+          aria-hidden="true"
+        />
+        <div
+          className="orb -right-20 top-24 h-72 w-72 bg-indigo-400/20"
+          aria-hidden="true"
+        />
+        {/* Fades the whole stack into the white section below, so the boundary
+            is a gradient rather than a visible seam. */}
+        <div
+          className="absolute inset-x-0 bottom-0 h-40 bg-gradient-to-b from-transparent to-white"
           aria-hidden="true"
         />
 
-        <Container className="relative py-16 sm:py-24 lg:py-28">
+        <Container className="relative py-16 sm:py-24 lg:py-32">
           <div className="mx-auto max-w-3xl text-center">
-            <Badge tone="brand">
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-white/70 px-3.5 py-1.5 text-xs font-medium text-brand-700 shadow-xs ring-1 ring-brand-200 backdrop-blur">
               <Icon name="location" className="h-3.5 w-3.5" />
               Home &amp; online tuition across India
-            </Badge>
+            </span>
 
-            <h1 className="mt-6 text-4xl font-bold leading-[1.1] sm:text-5xl lg:text-6xl">
-              Find the right tutor,{" "}
-              <span className="text-brand-600">right near you</span>
+            <h1 className="mt-6 text-4xl font-bold leading-[1.08] sm:text-5xl lg:text-6xl">
+              Find the right tutor,
+              <br className="hidden sm:block" />{" "}
+              {/* Gradient on the accent phrase only. On the full headline it
+                  would cost legibility for no gain. */}
+              <span className="bg-gradient-to-r from-brand-600 via-brand-500 to-indigo-500 bg-clip-text text-transparent">
+                right near you
+              </span>
             </h1>
 
             <p className="mx-auto mt-5 max-w-xl text-lg leading-relaxed text-ink-600 sm:text-xl">
@@ -105,6 +128,32 @@ export default async function Home() {
             <p className="mt-4 text-sm text-ink-500">
               Free for students and parents. Always.
             </p>
+
+            {/* Proof strip. Deliberately capability claims, not fabricated user
+                counts — inventing "10,000 happy students" on day one is a lie
+                the product cannot back up. */}
+            <dl className="mx-auto mt-12 grid max-w-2xl grid-cols-3 gap-4">
+              {[
+                { value: `${totalSubjects}+`, label: "Subjects" },
+                { value: `${cities.length}`, label: "Cities" },
+                { value: "5", label: "Tutors max per enquiry" },
+              ].map((stat) => (
+                <div
+                  key={stat.label}
+                  className="glass rounded-xl px-3 py-4 ring-1 ring-white/60"
+                >
+                  <dt className="sr-only">{stat.label}</dt>
+                  <dd>
+                    <span className="block text-2xl font-bold text-ink-900 sm:text-3xl">
+                      {stat.value}
+                    </span>
+                    <span className="mt-0.5 block text-xs text-ink-500 sm:text-sm">
+                      {stat.label}
+                    </span>
+                  </dd>
+                </div>
+              ))}
+            </dl>
           </div>
         </Container>
       </section>
@@ -143,8 +192,12 @@ export default async function Home() {
       {/* ---------------------------------------------------------------- */}
       {/* Subject categories                                                */}
       {/* ---------------------------------------------------------------- */}
-      <section className="border-y border-ink-200 bg-ink-50 py-16 sm:py-20">
-        <Container>
+      <section className="noise relative overflow-hidden bg-aurora-soft py-16 sm:py-20">
+        <div
+          className="orb -right-32 top-1/3 h-96 w-96 bg-brand-300/20"
+          aria-hidden="true"
+        />
+        <Container className="relative">
           <SectionHeading
             eyebrow="Browse"
             title="What would you like to learn?"
@@ -193,7 +246,10 @@ export default async function Home() {
       {/* ---------------------------------------------------------------- */}
       {/* Trust                                                             */}
       {/* ---------------------------------------------------------------- */}
-      <section className="py-16 sm:py-20">
+      <section className="relative py-16 sm:py-20">
+        {/* Fading hairline instead of a hard border — a full-width 1px line
+            between every section reads as a table, not a page. */}
+        <div className="rule-fade absolute inset-x-0 top-0" aria-hidden="true" />
         <Container>
           <SectionHeading
             centered
@@ -247,11 +303,17 @@ export default async function Home() {
       <section className="pb-20">
         <Container>
           <div className="grid gap-6 lg:grid-cols-2">
-            <div className="rounded-2xl bg-brand-600 p-9 text-white sm:p-11">
-              <h2 className="text-2xl font-bold text-white sm:text-3xl">
+            {/* Deep blue rather than flat brand-600, with its own orb and grain
+                so the panel has the same depth as the rest of the page. */}
+            <div className="noise relative overflow-hidden rounded-2xl bg-gradient-to-br from-brand-600 via-brand-700 to-indigo-700 p-9 text-white sm:p-11">
+              <div
+                className="orb -right-10 -top-10 h-56 w-56 bg-brand-400/30"
+                aria-hidden="true"
+              />
+              <h2 className="relative text-2xl font-bold text-white sm:text-3xl">
                 Looking for a tutor?
               </h2>
-              <p className="mt-3 max-w-md leading-relaxed text-brand-100">
+              <p className="relative mt-3 max-w-md leading-relaxed text-brand-100">
                 Post your requirement in under a minute. It is free, and verified
                 tutors near you will get in touch.
               </p>
@@ -259,18 +321,22 @@ export default async function Home() {
                 href="/post-requirement"
                 variant="secondary"
                 size="lg"
-                className="mt-7"
+                className="relative mt-7"
               >
                 Post a requirement
                 <Icon name="arrow" className="h-5 w-5" />
               </ButtonLink>
             </div>
 
-            <div className="rounded-2xl bg-ink-900 p-9 text-white sm:p-11">
-              <h2 className="text-2xl font-bold text-white sm:text-3xl">
+            <div className="noise relative overflow-hidden rounded-2xl bg-gradient-to-br from-ink-800 via-ink-900 to-ink-900 p-9 text-white sm:p-11">
+              <div
+                className="orb -bottom-16 -left-10 h-56 w-56 bg-brand-500/25"
+                aria-hidden="true"
+              />
+              <h2 className="relative text-2xl font-bold text-white sm:text-3xl">
                 Are you a tutor?
               </h2>
-              <p className="mt-3 max-w-md leading-relaxed text-ink-300">
+              <p className="relative mt-3 max-w-md leading-relaxed text-ink-300">
                 Get student enquiries from your own area. Create a profile free,
                 and only pay when you choose to respond to one.
               </p>
@@ -278,7 +344,7 @@ export default async function Home() {
                 href="/for-tutors"
                 variant="secondary"
                 size="lg"
-                className="mt-7"
+                className="relative mt-7"
               >
                 Start teaching
                 <Icon name="arrow" className="h-5 w-5" />

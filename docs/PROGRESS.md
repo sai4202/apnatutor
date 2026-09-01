@@ -171,6 +171,22 @@ Phone + OTP authentication works end to end. **42 tests pass**, and the flow was
 
 **Caught while building:** Spring Data does not scan repository interfaces nested inside a class — the failure is an unhelpful "no qualifying bean" at startup. Also renamed `Location.city_` to `cityLevel`, because Spring Data treats `_` in a derived query name as a property-path separator, so `findByCity_True` would parse as `city.true`.
 
+### 2026-09-01 — Dev mode with seeded test accounts, and a real background
+
+**Signing in with no SMS provider.** A single `apnatutor.dev.enabled` switch, not three independent flags — one thing to turn off is one thing to forget to turn off. It seeds one account per role (`9999900001` student, `9999900002` tutor, `9999900003` admin, OTP `123456`), bypasses SMS for those numbers, skips their hourly send cap, and returns generated codes in the `/auth/otp/request` response so the login screen can fill them in.
+
+**`DevModeGuard` is the control that makes this safe.** It refuses to start the application if dev mode is on alongside a real SMS provider or a `prod` profile. Left enabled in production, seeded accounts with a published OTP are an unauthenticated login for anyone who reads the README — so this is enforced by a startup failure, not a comment. Four tests cover it.
+
+Seeded through an `ApplicationRunner` rather than a Flyway migration, deliberately: a migration runs in every environment it reaches, so published-credential accounts would land in production on the first deploy.
+
+Test accounts are also **off in the test profile** — the auth tests assert real rate limits and random codes, and a fixed OTP would quietly bypass exactly what they exist to verify.
+
+**Background redesign.** The flat white was reading as unfinished. Now layered: aurora colour fields, a masked dot field, hand-placed blurred orbs, and an feTurbulence film grain — the grain being the layer that actually matters, since it breaks up the smooth gradient ramps that band visibly on cheap panels, which is most of this audience's hardware. Section boundaries use a fading hairline rather than a full-width border. All CSS, no images, no JavaScript.
+
+**Deliberately against the current trend.** The 2026 SaaS design writing converges on dark mode plus glassmorphism as a default. That language is aimed at developers evaluating B2B tools; here the visitor is a parent deciding who to let into their home, and dark glass reads as a crypto product rather than a trusted service. White and blue stays.
+
+Hero stat tiles show real catalog counts (70+ subjects, 10 cities) and the unlock cap — capability claims, not invented user numbers, which the product could not back up on day one.
+
 ---
 
 ## Known issues
