@@ -5,12 +5,14 @@ import {
   fetchCities,
   fetchLeafSubjects,
   fetchTutorProfile,
+  fetchTutorReviews,
   searchTutors,
   type PublicTutorProfile,
 } from "@/lib/api";
 import { EXAMPLE_TUTORS, findExampleTutor } from "@/lib/exampleTutors";
 import { SearchResultCard } from "@/components/SearchResultCard";
 import { SubjectTile } from "@/components/SubjectTile";
+import { TutorReviews } from "@/components/TutorReviews";
 import {
   Badge,
   ButtonLink,
@@ -207,8 +209,9 @@ const MODE_LABELS: Record<string, string> = {
   ONLINE: "Online",
 };
 
-function TutorProfile({ tutor }: { tutor: PublicTutorProfile }) {
+async function TutorProfile({ tutor }: { tutor: PublicTutorProfile }) {
   const name = tutor.displayName ?? "Tutor";
+  const reviews = await fetchTutorReviews(tutor.id);
   const initials = name
     .split(" ")
     .slice(0, 2)
@@ -375,6 +378,8 @@ function TutorProfile({ tutor }: { tutor: PublicTutorProfile }) {
                 </ul>
               </section>
             )}
+
+            <TutorReviews reviews={reviews} tutorName={name} />
           </div>
 
           <aside className="space-y-5">

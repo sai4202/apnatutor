@@ -3,7 +3,7 @@
 > Update this **in the same session as the code change**, never later. If a session ends without a changelog entry, the next session starts blind.
 
 **Current milestone:** M5 — Reviews, admin & trust
-**Overall:** ███████ M0–M4 complete · **187 tests** · **the full money path works**: a parent posts free, matching tutors are notified, a tutor buys credits, unlocks the lead, gets the phone number, and can dispute it if it was worthless
+**Overall:** ████████ M0–M4 complete, **M5 half done** · **205 tests** · the full money path works, and **ratings are now real**: a student who was actually put in touch with a tutor can review them, a moderator publishes it, and search finally ranks on something
 
 ---
 
@@ -11,9 +11,9 @@
 
 Read this first when resuming. Keep it to exactly three, always current.
 
-1. `M5-01` / `M5-02` / `M5-03` — reviews with moderation and tutor replies, plus rating aggregation. Eligibility keys off `lead_unlocks`, which is why that table was made generic.
-2. `M5-04` … `M5-06` — the admin console. Verification, refunds and settings all have endpoints already; this is the screen that ties them together so nobody has to touch the database.
-3. `M5-07` / `M5-08` / `M5-09` — rate limiting (repays debt T10), audit log, abuse reporting, DPDP export and delete.
+1. `M5-05` / `M5-06` — the admin console. Four of the seven backend capabilities now exist (verification, review moderation, credits/refunds, packages/pricing); what remains is user suspend/reinstate, requirement moderation, funnel metrics — and then the screens. `AccountMenu.tsx:24` already links `ADMIN → /admin`, which 404s today, and `RequireRole` already handles the role, so the guard is ready.
+2. `M5-07` / `M5-08` — rate limiting (repays debt **T10**: OTP is capped per phone only, so one attacker can walk many numbers) and the audit log. `V17__audit.sql` — **not `V11`**, which is `notifications`.
+3. `M5-09` / `M5-10` — abuse reporting, then DPDP export and delete. Note `M5-10.3`: deletion must anonymise ledger rows, never remove them.
 
 M6 is deferred at your request. Full breakdown in [TASKS.md](./TASKS.md); open decisions and debt in [PENDING.md](./PENDING.md).
 
@@ -28,12 +28,39 @@ M6 is deferred at your request. Full breakdown in [TASKS.md](./TASKS.md); open d
 | M2 — Catalog & discovery | ✅ Done (2 subtasks deliberately deferred) |
 | M3 — Requirements & lead loop | ✅ Done (2026-09-01) |
 | M4 — Credits & payments | ✅ Done (2026-09-01) |
-| M5 — Reviews, admin & trust | 🟡 Next |
+| M5 — Reviews, admin & trust | 🟡 In progress — `M5-01`…`M5-04` and `M5-11` done |
 | M6 — Polish & launch | ⏸️ Deferred at your request |
 
 ---
 
 ## Changelog
+
+### 2026-09-01 — M5-01…M5-04: reviews, and a rating that finally means something
+
+**205 tests pass**, up from 187. Migration V16.
+
+**This chunk was chosen because M2 had already built the consumer.** `tutor_profiles.avg_rating` has existed since V6, indexed for sorting in V8, read by `TutorSearchRepository`, backing the `minRating` filter, and ordering the lead-notification fan-out. Nothing wrote it. Four pieces of shipped code were ranking on a column where every tutor was tied at NULL. `ReviewApiTest.searchSortsAndFiltersOnRealRatings` is the test that would have failed yesterday for want of data rather than logic.
+
+**Aggregates are recomputed, never incremented** (ADR #12). `review_count + 1` drifts the moment two moderators approve together — both read the old value, both write the same new one, and a review is gone from the count for good. Worse, it cannot be undone: withdrawing a published review would need to know the old rating to subtract it. One SQL statement derived from the table serves approval, rejection and withdrawal, cannot get a sign backwards, and is idempotent enough that `recompute-ratings` is the repair tool as well as the backfill. The same reasoning that makes the ledger authoritative and the wallet balance a cache.
+
+**Withdrawing the last review returns a tutor to NULL, not 0.0.** Search sorts `NULLS LAST`, so a zero would rank an unrated tutor below every one-star tutor on the platform. There is a test named for it.
+
+**Two gaps in the specs, found and closed.**
+
+- `TASKS.md` called for `V10__reviews.sql` and `V11__audit.sql`. Both numbers were taken — V10 is `billing`, V11 is `notifications`. Reviews are **V16**; the audit line now says V17.
+- `M5-03.2` required replies to be moderated, but `SOURCE_OF_TRUTH.md` §5 defined `tutor_reply` as a bare text column with no status. There was nowhere for a reply to wait. It now carries `tutor_reply_status`, `tutor_reply_at` and `tutor_reply_moderated_by`, decided independently of the review — refusing a tutor's answer is no reason to unpublish the student's words.
+
+**A refunded unlock does not confer the right to review.** The eligibility query requires `status = ACTIVE`. A refund means the tutor successfully argued the lead was worthless and we agreed; letting that student then rate them makes every dispute an invitation to retaliate, and tutors would learn to stop disputing. That is a rule about incentives, not about data, so it is written into SoT §3.6 rather than left in a query.
+
+**M5-04.2 is structural, and asserted as a property.** No request record has a field a client could bind an aggregate to. `ReviewDtoContractTest` walks the record components of every request shape rather than posting one payload at one endpoint — it fails the day somebody adds `avgRating` to a DTO, which is the failure worth catching.
+
+**Two ids for a tutor, deliberately** (ADR #13). The database keys reviews by user id, because eligibility joins `lead_unlocks` and every money table keys the tutor that way. The API takes `tutor_profiles.id`, because that is the only tutor identifier the frontend has anywhere else. The translation happens once, in the service.
+
+**Screens nobody had written a task for.** `M5-06` covers only the admin UI, so the student and tutor review screens existed in no task at all — a review nobody can write is dead code. Added as `M5-11`. The student writes one inline on the enquiry the tutor answered, which is where they already are when they have an opinion; a flow that starts with finding the tutor again collects far fewer reviews, and reviews are the scarce input. The tutor sees pending reviews too — hiding them until publication means the first they hear of a complaint is a parent quoting it back. Reviewer names are never shown to the tutor, and are masked to "Priya S." publicly.
+
+**Moderation is two queues, not one.** A pending review is a student who thinks they were ignored; a pending reply is a tutor who cannot answer criticism already published about them. Merging them buries whichever is rarer.
+
+Also shipped: `unpublish`, for a review reported after it went live; notification on publication, on rejection with the reason, and to the student when a reply goes public; and one-query name lookups on both list endpoints, so neither is an N+1.
 
 ### 2026-09-01 — M4 closed: money in, exactly once, and provably
 

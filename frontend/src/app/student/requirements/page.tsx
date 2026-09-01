@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useAuth } from "@/lib/auth";
 import { ErrorBanner } from "@/components/RequireRole";
 import { Badge, ButtonLink, Container, Icon } from "@/components/ui";
+import { StarRating } from "@/components/StarRating";
 
 /**
  * A parent's enquiries and the tutors who responded.
@@ -40,6 +41,18 @@ interface Requirement {
   expiresAt: string;
   postedAt: string;
   respondingTutors: RespondingTutor[];
+}
+
+
+/** A review this student has written, keyed to the tutor it is about. */
+interface OwnReview {
+  id: number;
+  tutorProfileId: number | null;
+  rating: number;
+  title: string | null;
+  body: string | null;
+  status: "PENDING" | "APPROVED" | "REJECTED";
+  rejectionReason: string | null;
 }
 
 const MODE_LABELS: Record<string, string> = {
@@ -81,6 +94,26 @@ export default function MyRequirementsPage() {
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
+  const [reviews, setReviews] = useState<OwnReview[]>([]);
+
+  /**
+   * Every review this student has written, fetched once.
+   *
+   * Not an eligibility call per responding tutor: anyone in that list has
+   * already paid to reach this student, which is exactly the condition the
+   * backend checks. So the only question left is whether a review already
+   * exists, and one request answers it for the whole page.
+   */
+  const loadReviews = useCallback(async () => {
+    try {
+      const res = await authFetch("/student/reviews");
+      if (res.ok) setReviews((await res.json()) as OwnReview[]);
+    } catch {
+      // Non-fatal: the enquiries are the point of this page, and a missing
+      // review box is better than an error screen over one.
+    }
+  }, [authFetch]);
+
   const load = useCallback(async () => {
     try {
       const res = await authFetch("/student/requirements");
@@ -96,9 +129,10 @@ export default function MyRequirementsPage() {
     // React's set-state-in-effect rule see that the writes are post-await.
     async function run() {
       await load();
+      await loadReviews();
     }
     void run();
-  }, [load]);
+  }, [load, loadReviews]);
 
   async function act(id: number, action: "hired" | "close") {
     setBusy(true);
@@ -273,6 +307,18 @@ export default function MyRequirementsPage() {
                             <Icon name="arrow" className="h-4 w-4" />
                           </Link>
                         )}
+
+                        {tutor.tutorProfileId && (
+                          <ReviewComposer
+                            tutorProfileId={tutor.tutorProfileId}
+                            tutorName={tutor.displayName ?? "this tutor"}
+                            existing={reviews.find(
+                              (review) =>
+                                review.tutorProfileId === tutor.tutorProfileId,
+                            )}
+                            onSaved={loadReviews}
+                          />
+                        )}
                       </li>
                     ))}
                   </ul>
@@ -312,5 +358,173 @@ export default function MyRequirementsPage() {
         )}
       </div>
     </Container>
+  );
+}
+
+/**
+ * Writing or revising a review of one tutor, inline on the enquiry it came from.
+ *
+ * <p>Placed here rather than on a separate "leave a review" screen because this
+ * is where the student already is when they have an opinion — looking at the
+ * tutor who answered them. A review flow that starts with finding the tutor
+ * again collects far fewer reviews, and reviews are the scarce input.
+ *
+ * <p>Editing is offered only while the review is still pending. After approval
+ * the text is public under a moderator's decision, and the backend refuses the
+ * edit — so offering the box would be a lie.
+ */
+function ReviewComposer({
+  tutorProfileId,
+  tutorName,
+  existing,
+  onSaved,
+}: {
+  tutorProfileId: number;
+  tutorName: string;
+  existing: OwnReview | undefined;
+  onSaved: () => Promise<void>;
+}) {
+  const { authFetch } = useAuth();
+  const [open, setOpen] = useState(false);
+  const [rating, setRating] = useState(existing?.rating ?? 0);
+  const [title, setTitle] = useState(existing?.title ?? "");
+  const [body, setBody] = useState(existing?.body ?? "");
+  const [saving, setSaving] = useState(false);
+  const [failure, setFailure] = useState<string | null>(null);
+
+  const editable = !existing || existing.status === "PENDING";
+
+  async function submit() {
+    if (rating < 1) return;
+    setSaving(true);
+    setFailure(null);
+
+    try {
+      const res = await authFetch(`/student/reviews/tutor/${tutorProfileId}`, {
+        method: "POST",
+        body: JSON.stringify({ rating, title, body }),
+      });
+
+      if (!res.ok) {
+        const problem = await res.json().catch(() => null);
+        setFailure(problem?.message ?? "Could not save your review.");
+        return;
+      }
+
+      setOpen(false);
+      await onSaved();
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  if (!open) {
+    return (
+      <div className="mt-3 border-t border-ink-100 pt-3">
+        {existing ? (
+          <div className="flex flex-wrap items-center gap-2.5">
+            <StarRating rating={existing.rating} />
+            <span className="text-sm text-ink-500">
+              {existing.status === "APPROVED"
+                ? "Your review is published"
+                : existing.status === "PENDING"
+                  ? "Your review is awaiting moderation"
+                  : "Your review was not published"}
+            </span>
+            {editable && (
+              <button
+                type="button"
+                onClick={() => setOpen(true)}
+                className="text-sm font-semibold text-brand-600 hover:text-brand-700"
+              >
+                Edit
+              </button>
+            )}
+          </div>
+        ) : (
+          <button
+            type="button"
+            onClick={() => setOpen(true)}
+            className="text-sm font-semibold text-brand-600 hover:text-brand-700"
+          >
+            Review {tutorName}
+          </button>
+        )}
+
+        {existing?.status === "REJECTED" && existing.rejectionReason && (
+          <p className="mt-2 text-sm text-ink-600">
+            {existing.rejectionReason}
+          </p>
+        )}
+      </div>
+    );
+  }
+
+  return (
+    <div className="mt-3 border-t border-ink-100 pt-4">
+      <fieldset>
+        <legend className="text-sm font-medium text-ink-700">
+          How was {tutorName}?
+        </legend>
+        <div className="mt-2 flex gap-1">
+          {[1, 2, 3, 4, 5].map((star) => (
+            <button
+              key={star}
+              type="button"
+              aria-label={`${star} out of 5`}
+              aria-pressed={rating === star}
+              onClick={() => setRating(star)}
+              className="rounded p-0.5 focus:outline-none focus:ring-2 focus:ring-brand-300"
+            >
+              <Icon
+                name="star"
+                className={`h-7 w-7 ${
+                  star <= rating ? "text-amber-500" : "text-ink-200"
+                }`}
+              />
+            </button>
+          ))}
+        </div>
+      </fieldset>
+
+      <input
+        value={title}
+        onChange={(event) => setTitle(event.target.value)}
+        maxLength={160}
+        placeholder="Sum it up in a few words"
+        className="mt-3 w-full rounded-xl border border-ink-200 px-3.5 py-2.5 text-ink-900 outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-100"
+      />
+      <textarea
+        value={body}
+        onChange={(event) => setBody(event.target.value)}
+        rows={4}
+        maxLength={2000}
+        placeholder="What went well, and what other parents should know."
+        className="mt-2 w-full rounded-xl border border-ink-200 px-3.5 py-2.5 text-ink-900 outline-none focus:border-brand-500 focus:ring-2 focus:ring-brand-100"
+      />
+
+      <p className="mt-2 text-xs text-ink-500">
+        Reviews are checked by a person before they appear, usually within a day.
+      </p>
+      {failure && <p className="mt-2 text-sm text-danger-700">{failure}</p>}
+
+      <div className="mt-3 flex gap-2.5">
+        <button
+          type="button"
+          onClick={submit}
+          disabled={saving || rating < 1}
+          className="rounded-lg bg-brand-600 px-4 py-2 text-sm font-semibold text-white hover:bg-brand-700 disabled:opacity-50"
+        >
+          {saving ? "Saving…" : existing ? "Update review" : "Submit review"}
+        </button>
+        <button
+          type="button"
+          onClick={() => setOpen(false)}
+          className="rounded-lg px-4 py-2 text-sm font-semibold text-ink-600 hover:text-ink-900"
+        >
+          Cancel
+        </button>
+      </div>
+    </div>
   );
 }

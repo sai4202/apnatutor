@@ -13,9 +13,9 @@
 | M2 — Discovery & SEO | 8 | 6 ☑, 2 ▶ |
 | M3 — Requirements & the lead loop | 11 | 11 ☑ — **complete, front to back** |
 | M4 — Credits & payments | 8 | 8 ☑ — **complete, front to back** |
-| M5 — Reviews, admin & trust | 10 | 0 |
+| M5 — Reviews, admin & trust | 11 | 5 ☑ — **reviews, moderation, replies and rating aggregation complete** |
 | M6 — Polish & launch | 10 | **deferred at your request** |
-| **V1 total** | **71** (260 subtasks) | **45** |
+| **V1 total** | **72** (271 subtasks) | **50** |
 
 ---
 
@@ -366,31 +366,31 @@ Both were found by walking the money path rather than by a failing test, and bot
 
 **Goal:** an admin can run the marketplace without touching the database.
 
-### ☐ `M5-01` Reviews schema & eligibility
-- ☐ `M5-01.1` `V10__reviews.sql` — `reviews`, unique on `(tutor_id, student_id)`
-- ☐ `M5-01.2` Eligibility: only a student connected to that tutor via an unlock
-- ☐ `M5-01.3` Submit endpoint with validation
+### ☑ `M5-01` Reviews schema & eligibility
+- ☑ `M5-01.1` `V16__reviews.sql` — `reviews`, unique on `(tutor_id, student_id)`. **Not `V10`, as this line originally said: V10 is `billing`.** Both ids are user ids, matching `lead_unlocks`
+- ☑ `M5-01.2` Eligibility: only a student connected to that tutor via an **`ACTIVE`** unlock — `LeadUnlockRepository.countEngagementsBetween`. A refunded unlock is one the tutor disowned as a bad lead, and letting that student rate them anyway makes every refund an invitation to retaliate
+- ☑ `M5-01.3` Submit endpoint with validation. Resubmitting while pending edits the existing review rather than being refused as a duplicate
 
-### ☐ `M5-02` Moderation
-- ☐ `M5-02.1` Everything starts `PENDING` — nothing user-written goes public unmoderated
-- ☐ `M5-02.2` Admin approve/reject queue
-- ☐ `M5-02.3` Notify the tutor on publication
+### ☑ `M5-02` Moderation
+- ☑ `M5-02.1` Everything starts `PENDING` — the filter is in the repository query, not applied by callers
+- ☑ `M5-02.2` Admin approve/reject queue, plus `unpublish` for a review reported after the fact
+- ☑ `M5-02.3` Notify the tutor on publication (`REVIEW_PUBLISHED`), and the student on rejection (`REVIEW_REJECTED`) — silence is indistinguishable from a bug
 
-### ☐ `M5-03` Tutor replies
-- ☐ `M5-03.1` Exactly one reply per review
-- ☐ `M5-03.2` Replies moderated too
+### ☑ `M5-03` Tutor replies
+- ☑ `M5-03.1` Exactly one reply per review, on a published review only
+- ☑ `M5-03.2` Replies moderated too — **this needed schema the plan did not have.** `tutor_reply` was specified as a bare text column with nowhere for a reply to sit `PENDING`; it now carries `tutor_reply_status`, `tutor_reply_at`, `tutor_reply_moderated_by`, decided independently of the review
 
-### ☐ `M5-04` Rating aggregation
-- ☐ `M5-04.1` Recompute `avg_rating` / `review_count` on approval
-- ☐ `M5-04.2` Never accept an aggregate from the client
-- ☐ `M5-04.3` Backfill/recompute command
+### ☑ `M5-04` Rating aggregation
+- ☑ `M5-04.1` Recompute `avg_rating` / `review_count` on **every** transition into or out of `APPROVED`, not only approval — un-approving must move the average back
+- ☑ `M5-04.2` Never accept an aggregate from the client. Structural: no request record has a field to bind one to, asserted over all of them by `ReviewDtoContractTest`
+- ☑ `M5-04.3` `POST /admin/reviews/recompute-ratings` — backfill and drift repair, the counterpart to the ledger's `reconcile`
 
 ### ☐ `M5-05` Admin backend
-- ☐ `M5-05.1` Verification queue
-- ☐ `M5-05.2` Review moderation
+- ☑ `M5-05.1` Verification queue — shipped at `M1-10` (`AdminVerificationController`)
+- ☑ `M5-05.2` Review moderation — `AdminReviewController`, two queues (reviews, replies)
 - ☐ `M5-05.3` User management, suspend/reinstate
-- ☐ `M5-05.4` Credit adjustments and refund decisions
-- ☐ `M5-05.5` Package and pricing management
+- ☑ `M5-05.4` Credit adjustments and refund decisions — shipped at `M4-06` (`AdminCreditController`, `AdminRefundController`)
+- ☑ `M5-05.5` Package and pricing management — shipped at `M4-01` (`AdminPackageController`, `AdminSettingsController`)
 - ☐ `M5-05.6` Requirement moderation (spam, fake leads)
 - ☐ `M5-05.7` Funnel metrics: signups, requirements, unlocks, revenue, conversion
 
@@ -407,7 +407,7 @@ Both were found by walking the money path rather than by a failing test, and bot
 - ☐ `M5-07.4` `429` with `Retry-After`
 
 ### ☐ `M5-08` Audit log
-- ☐ `M5-08.1` `V11__audit.sql` — `audit_log`
+- ☐ `M5-08.1` `V17__audit.sql` — `audit_log` (**not `V11`**: that is `notifications`)
 - ☐ `M5-08.2` Every admin action recorded with before/after
 - ☐ `M5-08.3` Every credit adjustment and refund recorded
 - ☐ `M5-08.4` Admin-visible, immutable
@@ -420,6 +420,15 @@ Both were found by walking the money path rather than by a failing test, and bot
 - ☐ `M5-10.1` Data export
 - ☐ `M5-10.2` Account deletion with a documented retention policy
 - ☐ `M5-10.3` **Deletion must not corrupt the financial ledger** — anonymise, never delete, ledger rows
+
+### ☑ `M5-11` Review screens — **added 2026-09-01**
+
+Not in the original plan: `M5-06` covers only the admin UI, so the screens students and tutors
+actually use had no task. A review nobody can write is dead code.
+
+- ☑ `M5-11.1` Student writes and edits a review inline on the enquiry the tutor answered — where they already are when they have an opinion, rather than behind a separate "leave a review" flow
+- ☑ `M5-11.2` Tutor sees reviews of them, pending included, with the one-reply composer (`/tutor/reviews`)
+- ☑ `M5-11.3` Published reviews on the public tutor profile, server-rendered so a crawler sees them, with reviewer names masked to "Priya S."
 
 ---
 

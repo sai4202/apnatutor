@@ -4,7 +4,7 @@
 >
 > **TASKS.md owns task status. This file owns everything that is stuck, undecided, or deferred.**
 
-**Last reviewed:** 2026-08-31 (after the backend/frontend split)
+**Last reviewed:** 2026-09-01 (at the start of M5)
 
 ---
 
@@ -55,6 +55,7 @@ Taken on knowingly, with the repayment point named. This is not a list of mistak
 | T13 | **The credit expiry job assumes a single application instance** | 2026-09-01 (M4) | `M6-07`, before scaling out | A stronger assumption than `RequirementExpiryJob`'s. That job's bulk UPDATE is naturally idempotent; this one writes ledger entries, and the "already processed?" check and the write are not atomic across processes. Two instances could each write off the same grant. Safe with one instance; a distributed lock is the first thing needed here if a second is ever added. |
 | T12 | **The lead-feed and notify queries duplicate their matching rule** | 2026-09-01 (M3) | When a third caller appears | `findLeadFeedFor` and `findTutorsToNotify` in `RequirementRepository` encode the same subject × location × published predicate in two hand-written native queries, inverted. They must stay in step: notifying a tutor about a lead their feed will not show them sends them to an empty screen. Two copies is tolerable and both are commented; a third means extracting a shared SQL view. |
 | T11 | **`lib/exampleTutors.ts` is hardcoded sample data** | 2026-09-01 | `M2-06.4` | Three fabricated tutor profiles power the hero marquee and `/tutors/[slug]`. Every surface showing them is labelled as an example, and the profile page carries a banner — but **this module must be deleted, not left behind**, when the real endpoints land. A forgotten sample profile that outlives launch is a fake listing on a live marketplace. Its shape deliberately matches what the search and profile endpoints must return, so the swap is a data-source change. |
+| T14 | **Review lists are unpaginated** | 2026-09-01 (M5) | When a tutor passes ~100 reviews | `publishedForProfile`, `aboutTutor` and `writtenBy` return every row. Correct today — nobody has more than a handful, and paginating a list of three is worse UX than not — and the moderation queues, which are the ones that could actually grow unbounded, are paginated already. The public profile read is the one to watch: it is the hot page, and it is cached for 5 minutes, which is what buys the time to fix it. |
 
 ---
 
@@ -91,10 +92,10 @@ Not urgent, but recording them now so they are not rediscovered under pressure.
 
 In order. Nothing below is blocked.
 
-1. `M1-01` — shared web plumbing (error shape, handler, pagination, springdoc, idempotency)
-2. `M1-02` — identity schema
-3. `M1-03` — OTP flow
-4. `M1-04` — JWT sessions, **including T1, the CSRF repayment**
+1. `M5-05.3` / `M5-05.6` / `M5-05.7` — the admin backend gaps: user suspend/reinstate, requirement moderation, funnel metrics. Suspension is nearly free: `UserStatus.SUSPENDED` exists, the DB constraint allows it, and `AuthService` already refuses a suspended user at login and refresh. **Nothing anywhere sets it** — only the write path is missing.
+2. `M5-06` — the admin frontend. `AccountMenu.tsx:24` already links `ADMIN → /admin`, which 404s today, and `RequireRole` is generic over role, so the guard is ready.
+3. `M5-07` — rate limiting, which repays **T10**.
+4. `M5-08` — the audit log. `V17__audit.sql`, not `V11`.
 
 ---
 

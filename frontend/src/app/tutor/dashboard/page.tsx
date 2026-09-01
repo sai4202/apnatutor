@@ -250,6 +250,15 @@ export default function TutorDashboard() {
           >
             How enquiries and credits work
           </Link>
+
+          {/* Reviews are how a tutor competes on something other than fee, so
+              the route to them belongs on the first screen rather than buried. */}
+          <Link
+            href="/tutor/reviews"
+            className="mt-2 block text-sm font-semibold text-brand-600 hover:text-brand-700"
+          >
+            Reviews of me
+          </Link>
         </section>
       </div>
     </Container>

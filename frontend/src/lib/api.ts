@@ -298,3 +298,48 @@ export async function fetchBackendHealth(): Promise<BackendHealth> {
     };
   }
 }
+
+/* -------------------------------------------------------------------------- */
+/* Reviews                                                                     */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * A published review, exactly as the public endpoint serves it.
+ *
+ * Note what is not here: no student id, no moderation status. The backend serves
+ * approved reviews only and its public record has no field for either, so there
+ * is nothing for this client to filter — which is the point. A client-side
+ * filter is one render away from being forgotten.
+ */
+export interface PublicReview {
+  id: number;
+  rating: number;
+  title: string | null;
+  body: string | null;
+  /** Masked: "Priya S.", never a full name. */
+  reviewerName: string;
+  createdAt: string;
+  /** Present only once the tutor's reply has been approved too. */
+  tutorReply: string | null;
+  tutorRepliedAt: string | null;
+}
+
+/**
+ * Published reviews for a tutor profile.
+ *
+ * Returns an empty list rather than throwing: a profile page that renders
+ * without its reviews is still useful, and one that 500s because the reviews
+ * call failed is not. Revalidated on the same 5-minute cycle as the profile
+ * itself, so the rating in the header and the reviews below it stay in step.
+ */
+export async function fetchTutorReviews(id: number): Promise<PublicReview[]> {
+  try {
+    const res = await fetch(`${API_BASE_URL}/public/tutors/${id}/reviews`, {
+      next: { revalidate: 300 },
+    });
+    if (!res.ok) return [];
+    return (await res.json()) as PublicReview[];
+  } catch {
+    return [];
+  }
+}

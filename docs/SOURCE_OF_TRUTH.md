@@ -131,9 +131,13 @@ The rule everything serves: **credits are granted exactly once, only for money a
 
 ### 3.6 Reviews
 - Only a student who **unlocked or was unlocked by** that tutor may review them. One review per student-tutor pair.
+- The engagement must be **`ACTIVE`**. A refunded unlock is one the tutor successfully disputed as a bad lead — the platform has already accepted the introduction was worthless. Letting that student rate the tutor anyway turns every refund into an invitation to retaliate, which quietly teaches tutors not to dispute.
 - Every review is `PENDING` until an admin approves it. Nothing user-written goes public unmoderated.
 - Rating is 1–5 integers. Tutor may post exactly one public reply per review.
-- Aggregates (`avg_rating`, `review_count`) are recomputed on approval, never trusted from the client.
+- **The reply is moderated separately** and carries its own status. An approved review can hold a pending reply, and refusing a reply leaves the review published: they are written by different people days apart, and a tutor's answer being refused is no reason to unpublish the student's words.
+- A published review can be **withdrawn** back to `PENDING` by an admin, for one reported after the fact.
+- Aggregates (`avg_rating`, `review_count`) are **recomputed from the table** on every transition into or out of `APPROVED`, never incremented and never trusted from the client. See ADR #12.
+- Reviewers are shown publicly as `Priya S.` via the same masking the lead feed uses. A full name against a review, on a page that also names a locality, is usually enough to identify a specific family.
 
 ---
 
@@ -189,7 +193,7 @@ Tables, in dependency order. `id` is `BIGSERIAL` unless stated. Every table gets
 - `payments` — `tutor_id`, `package_id`, `razorpay_order_id`, `razorpay_payment_id`, `amount_paise`, `status` (`CREATED`/`PAID`/`FAILED`), `raw_payload` (JSONB)
 
 **Trust & platform**
-- `reviews` — `tutor_id`, `student_id`, `rating`, `title`, `body`, `status`, `tutor_reply`, `moderated_by`. Unique on (tutor_id, student_id)
+- `reviews` — `tutor_id`, `student_id` (both **user ids**, matching `lead_unlocks`), `rating`, `title`, `body`, `status`, `moderated_by`, `moderated_at`, `rejection_reason`, `tutor_reply`, **`tutor_reply_status`**, **`tutor_reply_at`**, **`tutor_reply_moderated_by`**. Unique on (tutor_id, student_id). The reply carries its own moderation status — a bare text column left nowhere for it to wait
 - `verifications` — `user_id`, `type` (`PHONE`/`EMAIL`/`ID`/`EDUCATION`), `status`, `document_url`, `reviewed_by`, `reviewed_at`, `rejection_reason`
 - `otp_codes` — `phone`, `code_hash`, `purpose`, `attempts`, `expires_at`, `consumed_at`
 - `refresh_tokens` — `user_id`, `token_hash`, `expires_at`, `revoked_at`
@@ -270,3 +274,4 @@ Database setup scripts belong to the backend: `backend/scripts/db-setup.sql` and
 | 9 | 2026-08-31 | **Phone + OTP** as primary identity | Indian consumer norm; email-first signup suppresses conversion badly in this market. |
 | 10 | 2026-08-31 | One role per account | Simplifies authorization in v1. Revisit only on real user demand. |
 | 11 | 2026-08-31 | **`backend/` and `frontend/` are self-contained projects in one repo** | Each builds, tests, runs and deploys from its own directory with its own config, and neither reads a file outside itself — so either can be extracted, containerised or deployed independently without untangling shared paths. They stay in one repo so an API change and its client update can land in a single commit. **Reverses the earlier shared repo-root `.env`**, which coupled the two at the filesystem level; config is now `backend/.env` and `frontend/.env.local`. Shared *product* docs stay in `docs/` because the business rules genuinely bind both sides, and splitting them would invite two diverging copies. |
+| 12 | 2026-09-01 | **Rating aggregates are recomputed from the reviews table, never incremented** | `review_count = review_count + 1` drifts the moment two moderators approve at once — both read the old value, both write the same new one, and a review vanishes from the count permanently. It also cannot be replayed: there is no way to ask an incremented counter whether it is still right. Deriving the aggregate makes approval, rejection and withdrawal one idempotent statement with no sign to get backwards, and gives `recompute-ratings` something to repair with. Same reasoning as Invariant 1, where the ledger is the truth and the balance is a cache. || 13 | 2026-09-01 | **Reviews address tutors by `tutor_profiles.id` on the wire, by user id in the database** | The database keys on the account, because eligibility joins `lead_unlocks` and every other money table keys the tutor that way. The API takes the profile id, because that is the only tutor identifier the frontend has anywhere else — public profiles, search results, the "tutors who responded" list. Two identifiers on the wire is how the wrong one ends up silently addressing a different person. |
