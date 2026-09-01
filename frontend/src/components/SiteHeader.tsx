@@ -35,7 +35,7 @@ const NAV = [
  */
 export function SiteHeader() {
   return (
-    <header className="glass sticky top-0 z-50 border-b border-ink-200/60">
+    <header className="sticky top-0 z-50 border-b border-ink-200/70 bg-white/85 backdrop-blur-md">
       <Container>
         <div className="flex h-16 items-center justify-between gap-4">
           <Link href="/" className="shrink-0 text-xl sm:text-2xl">
