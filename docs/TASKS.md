@@ -9,7 +9,7 @@
 | Milestone | Tasks | Done |
 |---|---|---|
 | M0 — Foundation | 12 | 12 ☑ |
-| M1 — Accounts, profiles & trust | 12 | 6 ☑, 4 ▶ |
+| M1 — Accounts, profiles & trust | 12 | 7 ☑, 4 ▶ |
 | M2 — Discovery & SEO | 8 | 2 ▶ (frontend built ahead of the API) |
 | M3 — Requirements & the lead loop | 11 | 0 |
 | M4 — Credits & payments | 8 | 0 |
@@ -125,13 +125,13 @@ Complete 2026-08-31, commit `02208c3`.
 - ☐ `M1-09.5` Image resize/compress for profile photos — deferred; a 5 MB cap is holding for now, and this is a cost optimisation rather than a correctness one
 - ☑ `M1-09.6` Tests — 16, covering disguised HTML, SVG, PHP, five path-traversal shapes, size caps and per-kind type rules
 
-### ☐ `M1-10` Verification
-- ☐ `M1-10.1` `V5__verification.sql` — `verifications`
-- ☐ `M1-10.2` Submit endpoints for ID and education documents
-- ☐ `M1-10.3` Admin approve/reject with rejection reason
-- ☐ `M1-10.4` `verification_level` derivation (PHONE → EMAIL → ID → EDUCATION)
-- ☐ `M1-10.5` Badges surfaced on the public profile response
-- ☐ `M1-10.6` Hook point for the M4 signup bonus at `ID_VERIFIED`
+### ☑ `M1-10` Verification
+- ☑ `M1-10.1` `V7__verification.sql` — `verifications`, with a partial unique index allowing resubmission after rejection but not duplicate live requests
+- ☑ `M1-10.2` Submit endpoints for ID and education documents, stored as private file kinds
+- ☑ `M1-10.3` Admin queue (oldest first) with approve/reject; **the rejection reason is mandatory at the database level**, and review is one-shot so the audit trail survives
+- ☑ `M1-10.4` `verification_level` derivation — **PHONE → ID → EDUCATION, with email as a separate badge rather than a rung.** Taken literally the original ladder would have made ID unreachable for any tutor without an email, since email is optional here; see `VerificationLevel`.
+- ☑ `M1-10.5` Badges and level on the public profile response
+- ☑ `M1-10.6` `levelFor()` returns `ID_VERIFIED` — the hook M4 needs for the signup bonus
 
 ### ☐ `M1-11` Frontend — auth
 - ☐ `M1-11.1` Phone entry + OTP screens, resend cooldown
