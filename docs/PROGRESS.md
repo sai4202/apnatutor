@@ -240,6 +240,14 @@ Hero stat tiles show real catalog counts (70+ subjects, 10 cities) and the unloc
 
 Hero stats moved inline under the search, pipe-separated. They remain capability claims (subjects, cities, free) rather than user counts: an incumbent can legitimately print "55 lakh students", and we cannot.
 
+**Two follow-up corrections, both caught from screenshots.**
+
+The first tile grid drew the *category* icon on every tile, so Mathematics, Physics, Chemistry, Biology and Science were five identical open books on five identical blue rectangles. The picture carried no information and the label did all the work — which defeats the point of a visual grid. Now one glyph per subject: a flask for Chemistry, an atom for Physics, a stethoscope for NEET, a shuttlecock for Badminton. Roughly 70 distinct glyphs, falling back to the category icon where a subject has none.
+
+Languages get their **native script** — అ for Telugu, அ for Tamil, ॐ for Sanskrit — rather than twelve identical speech bubbles, which was the same failure in miniature. Set as text, so they stay correct at any size and need no path tracing. Tiles also shift tone by position, since five tiles in an identical shade still read as one block of colour.
+
+Second: the page rendered only the first three categories, which silently hid Music & Dance, Study Abroad Tests and Hobbies & Sports — half of what the platform offers, invisible on the page whose job is to show what the platform offers. Now renders every category.
+
 ---
 
 ## Known issues

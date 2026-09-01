@@ -78,7 +78,7 @@ export default async function Home() {
     fetchCities(),
   ]);
 
-  const categories = subjectTree.slice(0, 6);
+  const categories = subjectTree;
   const totalSubjects = subjectTree.reduce(
     (sum, category) => sum + category.children.length,
     0,
@@ -233,7 +233,11 @@ export default async function Home() {
                class, and those are different errands — grouping lets them skip
                the half of the page that is not theirs. */
             <div className="mt-12 space-y-10">
-              {categories.slice(0, 3).map((category) => (
+              {/* Every category, not a slice. Capping this at three silently hid
+                  Music & Dance, Study Abroad Tests and Hobbies & Sports — a
+                  whole half of what the platform offers, invisible on the page
+                  that exists to show what the platform offers. */}
+              {categories.map((category) => (
                 <div key={category.slug}>
                   <div className="flex items-center justify-between gap-4">
                     <div className="flex items-center gap-2.5">
@@ -256,12 +260,13 @@ export default async function Home() {
                   </div>
 
                   <div className="mt-5 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
-                    {category.children.slice(0, 5).map((child) => (
+                    {category.children.slice(0, 5).map((child, index) => (
                       <SubjectTile
                         key={child.slug}
                         name={child.name}
                         slug={child.slug}
                         categorySlug={category.slug}
+                        index={index}
                       />
                     ))}
                   </div>
