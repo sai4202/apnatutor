@@ -3,12 +3,12 @@ import { fetchCities, fetchSubjectTree } from "@/lib/api";
 import { SearchBar } from "@/components/SearchBar";
 import { TutorCard } from "@/components/TutorCard";
 import { CategoryIcon, categoryTile } from "@/components/CategoryIcon";
+import { SubjectTile } from "@/components/SubjectTile";
 import { CityIcon } from "@/components/CityIcon";
 import { EXAMPLE_TUTORS } from "@/lib/exampleTutors";
 import {
   Badge,
   ButtonLink,
-  Card,
   Container,
   Icon,
   SectionHeading,
@@ -118,16 +118,36 @@ export default async function Home() {
                   <SearchBar cities={cities} />
                 </div>
 
-                <div className="mt-5 flex flex-wrap items-center gap-x-5 gap-y-2 text-sm text-ink-500">
-                  {["Free for students", "Verified tutors", "Max 5 responses"].map(
-                    (point) => (
-                      <span key={point} className="flex items-center gap-1.5">
-                        <Icon name="check" className="h-4 w-4 text-brand-600" />
-                        {point}
+                {/* Pipe-separated figures, sitting directly under the search
+                    where they answer "is this worth using?" at the moment the
+                    question arises.
+
+                    These are capability claims — subjects, cities, the response
+                    cap — not user counts. Inventing "55 lakh students" the way
+                    an incumbent can legitimately state it would be a lie the
+                    first search disproves. */}
+                <dl className="mt-6 flex flex-wrap items-center gap-x-4 gap-y-2 text-sm sm:gap-x-5">
+                  {[
+                    { value: `${totalSubjects}+`, label: "Subjects" },
+                    { value: `${cities.length}`, label: "Cities" },
+                    { value: "Free", label: "for students" },
+                  ].map((stat, index) => (
+                    <div key={stat.label} className="flex items-center gap-4 sm:gap-5">
+                      {index > 0 && (
+                        <span className="h-5 w-px bg-brand-300" aria-hidden="true" />
+                      )}
+                      <span>
+                        <dt className="sr-only">{stat.label}</dt>
+                        <dd>
+                          <span className="text-lg font-bold text-ink-900">
+                            {stat.value}
+                          </span>{" "}
+                          <span className="text-ink-600">{stat.label}</span>
+                        </dd>
                       </span>
-                    ),
-                  )}
-                </div>
+                    </div>
+                  ))}
+                </dl>
               </div>
 
               {/* The product itself, looping. Fixed height: the card column
@@ -152,26 +172,6 @@ export default async function Home() {
               </div>
             </div>
           </div>
-        </section>
-      </Container>
-
-      {/* ---------------------------------------------------------------- */}
-      {/* Stats — a slim panel, breaking the rhythm between two tall ones    */}
-      {/* ---------------------------------------------------------------- */}
-      <Container>
-        <section className="panel bg-white ring-1 ring-ink-200/70">
-          <dl className="grid divide-y divide-ink-200 sm:grid-cols-3 sm:divide-x sm:divide-y-0">
-            {[
-              { value: `${totalSubjects}+`, label: "Subjects to learn" },
-              { value: `${cities.length}`, label: "Cities across India" },
-              { value: "5", label: "Tutors max per enquiry" },
-            ].map((stat) => (
-              <div key={stat.label} className="px-6 py-7 text-center">
-                <dd className="text-3xl font-bold text-brand-600">{stat.value}</dd>
-                <dt className="mt-1 text-sm text-ink-500">{stat.label}</dt>
-              </div>
-            ))}
-          </dl>
         </section>
       </Container>
 
@@ -216,50 +216,56 @@ export default async function Home() {
       {/* Subject categories                                                */}
       {/* ---------------------------------------------------------------- */}
       <Container>
-        <section className="panel bg-section-tint px-6 py-14 ring-1 ring-brand-100 sm:px-10 sm:py-16 lg:px-14">
-          <SectionHeading
-            eyebrow="Browse"
-            title="What would you like to learn?"
-            description="From school tuition and entrance exams to music, languages and code."
-          />
+        {/* brand-100 rather than the near-white tint used before: a browse
+            section should be an obvious change of surface, not a shade that
+            reads as white next to white. */}
+        <section className="panel bg-brand-100 px-6 py-14 sm:px-10 sm:py-16 lg:px-14">
+          <div className="text-center">
+            <h2 className="text-3xl font-bold sm:text-4xl">Explore categories</h2>
+            <p className="mx-auto mt-3 max-w-xl text-lg leading-relaxed text-ink-600">
+              From school tuition and entrance exams to music, languages and code.
+            </p>
+          </div>
 
           {categories.length > 0 ? (
-            <div className="mt-10 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-              {categories.map((category) => (
-                <Card key={category.slug} interactive className="p-6">
-                  <div className="flex items-center gap-3">
-                    {/* Colour-coded tile. The hue is per category and appears
-                        only here — never on a button — so blue stays the single
-                        action colour while categories stay distinguishable. */}
-                    <span
-                      className={`flex h-11 w-11 items-center justify-center rounded-xl ${categoryTile(category.slug)}`}
+            /* Grouped by category with a tile grid under each, rather than one
+               flat list. A parent arrives wanting tuition or wanting a hobby
+               class, and those are different errands — grouping lets them skip
+               the half of the page that is not theirs. */
+            <div className="mt-12 space-y-10">
+              {categories.slice(0, 3).map((category) => (
+                <div key={category.slug}>
+                  <div className="flex items-center justify-between gap-4">
+                    <div className="flex items-center gap-2.5">
+                      <span
+                        className={`flex h-9 w-9 items-center justify-center rounded-lg ${categoryTile(category.slug)}`}
+                      >
+                        <CategoryIcon slug={category.slug} className="h-4.5 w-4.5" />
+                      </span>
+                      <h3 className="text-xl font-bold text-ink-900">
+                        {category.name}
+                      </h3>
+                    </div>
+                    <Link
+                      href={`/tutors?category=${category.slug}`}
+                      className="flex shrink-0 items-center gap-1.5 text-sm font-semibold text-brand-700 hover:text-brand-800"
                     >
-                      <CategoryIcon slug={category.slug} className="h-5 w-5" />
-                    </span>
-                    <h3 className="text-lg font-semibold text-ink-900">
-                      {category.name}
-                    </h3>
+                      View all
+                      <Icon name="arrow" className="h-4 w-4" />
+                    </Link>
                   </div>
-                  <ul className="mt-4 flex flex-wrap gap-2">
-                    {category.children.slice(0, 6).map((child) => (
-                      <li key={child.slug}>
-                        <Link
-                          href={`/tutors?q=${child.slug}`}
-                          className="inline-block rounded-lg bg-white px-3 py-1.5 text-sm text-ink-700 ring-1 ring-ink-200 transition-colors hover:bg-brand-50 hover:text-brand-700 hover:ring-brand-300"
-                        >
-                          {child.name}
-                        </Link>
-                      </li>
+
+                  <div className="mt-5 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
+                    {category.children.slice(0, 5).map((child) => (
+                      <SubjectTile
+                        key={child.slug}
+                        name={child.name}
+                        slug={child.slug}
+                        categorySlug={category.slug}
+                      />
                     ))}
-                  </ul>
-                  <Link
-                    href={`/tutors?category=${category.slug}`}
-                    className="mt-5 inline-flex items-center gap-1.5 text-sm font-semibold text-brand-600 hover:text-brand-700"
-                  >
-                    View all
-                    <Icon name="arrow" className="h-4 w-4" />
-                  </Link>
-                </Card>
+                  </div>
+                </div>
               ))}
             </div>
           ) : (

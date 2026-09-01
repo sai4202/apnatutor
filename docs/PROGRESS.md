@@ -224,6 +224,22 @@ Hero stat tiles show real catalog counts (70+ subjects, 10 cities) and the unloc
 2. **`@Transactional(readOnly = true)` on a method that writes.** `getOwnProfile` creates the profile on first access, so the very first fetch failed with a 500.
 3. **Jackson 3 flipped `FAIL_ON_NULL_FOR_PRIMITIVES` to true.** Boot 4 ships Jackson 3, so an omitted `boolean` in a request body is now a hard parse error instead of defaulting to `false`. Request DTOs now use boxed types with explicit defaults, rather than disabling the check globally for every endpoint. Recorded in `backend/CLAUDE.md` — this will recur on every DTO from here.
 
+### 2026-09-01 — Backgrounds, section panels, and a visual browse grid
+
+**A cascade bug, caught from a screenshot.** "Are you a tutor?" was invisible on its dark panel and the blue panel's heading rendered near-black — both marked `text-white`. The base block in `globals.css` was **unlayered**, and unlayered CSS beats layered CSS regardless of specificity, so `h1,h2,h3,h4 { color: ink-900 }` silently overrode every white heading in the application. Wrapping it in `@layer base` fixed it everywhere.
+
+> Worth noting how this was found: my verification greps rendered HTML, and the HTML was always correct. The failure existed only in computed styles. Screenshots catch a class of bug that markup assertions structurally cannot.
+
+**Section panels.** Every section is now a rounded panel on a page canvas rather than a full-bleed band. Panels give each section a real edge, and because they all sit in the same `Container` their edges line up down the page — most of what makes a layout read as deliberate. One radius everywhere; mixing radii is what makes a page look assembled from parts.
+
+**The canvas needed real weight.** First attempt used `ink-50` (#f8fafc), barely a shade off white, so panels had nothing to sit against and the page still read as flat white. Replaced with a dedicated `--color-canvas` blue-grey (#e6edf7): luminance ratio against white goes from ~1.04 to ~1.18. Same root cause fixed in several inner surfaces that were near-white on near-white.
+
+**Visual browse grid**, after UrbanPro was given as a reference. Categories are now grouped with a five-column tile grid each, rather than text chips.
+
+**Deliberately not stock photography**, unlike the reference. Seventy photos is several megabytes on a mid-range Android on a patchy connection; every photo needs a licence traceable to launch; and a stock photo of a smiling student implies a classroom that does not exist yet. Generated gradient-and-glyph tiles cost nothing and claim nothing. The trade is real — photographs carry more warmth — and if photography is commissioned later only `SubjectTile` changes.
+
+Hero stats moved inline under the search, pipe-separated. They remain capability claims (subjects, cities, free) rather than user counts: an incumbent can legitimately print "55 lakh students", and we cannot.
+
 ---
 
 ## Known issues

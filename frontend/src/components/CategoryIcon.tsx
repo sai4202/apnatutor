@@ -1,11 +1,11 @@
-import type { ReactNode } from "react";
+﻿import type { ReactNode } from "react";
 
 /**
  * An icon and colour per subject category.
  *
  * <h2>Why more than one colour, when the palette is deliberately one accent</h2>
  *
- * Blue stays the <em>action</em> colour — every button and link is blue, and
+ * Blue stays the <em>action</em> colour â€” every button and link is blue, and
  * nothing else is. These hues are used only inside a small icon tile, never on
  * an interactive element, so they add scannability without ever competing with
  * a call to action.
@@ -21,21 +21,25 @@ import type { ReactNode } from "react";
  *
  * Tailwind extracts class names statically from source, so a constructed string
  * like {@code `bg-${hue}-50`} produces no CSS at all. Every class here is a
- * complete literal for that reason — not verbosity for its own sake.
+ * complete literal for that reason â€” not verbosity for its own sake.
  */
 
 type CategoryStyle = {
   tile: string;
+  /** Saturated gradient for the large image-style tiles on the browse grid. */
+  gradient: string;
   icon: ReactNode;
 };
 
 const FALLBACK: CategoryStyle = {
   tile: "bg-ink-100 text-ink-600",
+  gradient: "from-ink-500 to-ink-700",
   icon: <path d="M4 6h16M4 12h16M4 18h10" />,
 };
 
 const CATEGORIES: Record<string, CategoryStyle> = {
   "school-tuition": {
+    gradient: "from-blue-500 to-blue-700",
     tile: "bg-blue-50 text-blue-600",
     // Open book
     icon: (
@@ -46,6 +50,7 @@ const CATEGORIES: Record<string, CategoryStyle> = {
     ),
   },
   "exam-preparation": {
+    gradient: "from-violet-500 to-violet-700",
     tile: "bg-violet-50 text-violet-600",
     // Target
     icon: (
@@ -57,6 +62,7 @@ const CATEGORIES: Record<string, CategoryStyle> = {
     ),
   },
   languages: {
+    gradient: "from-teal-500 to-teal-700",
     tile: "bg-teal-50 text-teal-600",
     // Globe
     icon: (
@@ -68,6 +74,7 @@ const CATEGORIES: Record<string, CategoryStyle> = {
     ),
   },
   "computers-it": {
+    gradient: "from-indigo-500 to-indigo-700",
     tile: "bg-indigo-50 text-indigo-600",
     // Angle brackets
     icon: (
@@ -78,6 +85,7 @@ const CATEGORIES: Record<string, CategoryStyle> = {
     ),
   },
   "music-dance": {
+    gradient: "from-rose-500 to-rose-700",
     tile: "bg-rose-50 text-rose-600",
     // Musical note
     icon: (
@@ -89,11 +97,13 @@ const CATEGORIES: Record<string, CategoryStyle> = {
     ),
   },
   "study-abroad-tests": {
+    gradient: "from-amber-500 to-amber-600",
     tile: "bg-amber-50 text-amber-600",
     // Paper plane
     icon: <path d="M21 3 3 10.5l7 3 3 7L21 3z" />,
   },
   "hobbies-sports": {
+    gradient: "from-emerald-500 to-emerald-700",
     tile: "bg-emerald-50 text-emerald-600",
     // Palette
     icon: (
@@ -109,6 +119,10 @@ const CATEGORIES: Record<string, CategoryStyle> = {
 
 export function categoryTile(slug: string): string {
   return (CATEGORIES[slug] ?? FALLBACK).tile;
+}
+
+export function categoryGradient(slug: string): string {
+  return (CATEGORIES[slug] ?? FALLBACK).gradient;
 }
 
 export function CategoryIcon({
