@@ -126,6 +126,67 @@ p {
   border-radius: 2px;
 }
 
+/* --- Motion --------------------------------------------------------------- */
+
+/* Vertical marquee for the hero tutor cards.
+   The list is rendered twice and translated by exactly -50%, so the second copy
+   lands where the first began and the loop has no visible seam. */
+@keyframes marquee-y {
+  from {
+    transform: translateY(0);
+  }
+  to {
+    transform: translateY(-50%);
+  }
+}
+
+.animate-marquee-y {
+  animation: marquee-y 32s linear infinite;
+}
+
+/* Pause when the pointer is over the stack. A card that slides away while
+   someone is reading it is actively hostile. */
+.marquee-host:hover .animate-marquee-y,
+.marquee-host:focus-within .animate-marquee-y {
+  animation-play-state: paused;
+}
+
+/* Fades the strip out at both ends instead of clipping it, so cards enter and
+   leave rather than appearing and vanishing at a hard edge. */
+.marquee-mask {
+  -webkit-mask-image: linear-gradient(
+    to bottom,
+    transparent,
+    #000 10%,
+    #000 90%,
+    transparent
+  );
+  mask-image: linear-gradient(
+    to bottom,
+    transparent,
+    #000 10%,
+    #000 90%,
+    transparent
+  );
+}
+
+/* A single gentle entrance. Used once per section, never stacked — content that
+   animates on every scroll becomes tiring by the third screen. */
+@keyframes fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(0.75rem);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-up {
+  animation: fade-up 0.5s ease-out both;
+}
+
 /* Respect a user's reduced-motion setting rather than overriding it. */
 @media (prefers-reduced-motion: reduce) {
   html {
@@ -137,6 +198,14 @@ p {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
+  }
+
+  /* The blanket rule above would collapse the marquee to its end state, leaving
+     the strip scrolled halfway off. Cancelling the animation outright is the
+     correct reduced-motion behaviour: a static, readable stack. */
+  .animate-marquee-y {
+    animation: none !important;
+    transform: none !important;
   }
 }
 

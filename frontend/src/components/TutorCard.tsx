@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { Icon } from "@/components/ui";
 
 /**
@@ -57,14 +58,19 @@ function initials(name: string): string {
 
 export function TutorCard({
   tutor,
+  href,
   className = "",
 }: {
   tutor: TutorSummary;
+  /** When given, the whole card becomes one link rather than only the CTA text. */
+  href?: string;
   className?: string;
 }) {
-  return (
+  const card = (
     <article
-      className={`rounded-xl bg-white p-5 ring-1 ring-ink-200 shadow-sm ${className}`}
+      className={`rounded-xl bg-white p-5 ring-1 ring-ink-200 shadow-sm ${
+        href ? "transition-all group-hover:shadow-md group-hover:ring-brand-300" : ""
+      } ${className}`}
     >
       <div className="flex items-start gap-3.5">
         <div
@@ -137,8 +143,22 @@ export function TutorCard({
             {tutor.feeUnit === "PER_MONTH" ? "/month" : "/hour"}
           </span>
         </div>
-        <span className="text-sm font-semibold text-brand-600">View profile</span>
+        <span className="flex items-center gap-1 text-sm font-semibold text-brand-600">
+          View profile
+          <Icon name="arrow" className="h-4 w-4" />
+        </span>
       </div>
     </article>
+  );
+
+  // The whole card is the target, not just the "View profile" text. A 200px-tall
+  // card with a 90px link inside it is a small target on a phone, and people tap
+  // the card anyway.
+  return href ? (
+    <Link href={href} className="group block">
+      {card}
+    </Link>
+  ) : (
+    card
   );
 }

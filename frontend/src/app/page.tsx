@@ -1,9 +1,10 @@
 import Link from "next/link";
 import { fetchCities, fetchSubjectTree } from "@/lib/api";
 import { SearchBar } from "@/components/SearchBar";
-import { TutorCard, type TutorSummary } from "@/components/TutorCard";
+import { TutorCard } from "@/components/TutorCard";
 import { CategoryIcon, categoryTile } from "@/components/CategoryIcon";
 import { CityIcon } from "@/components/CityIcon";
+import { EXAMPLE_TUTORS } from "@/lib/exampleTutors";
 import {
   Badge,
   ButtonLink,
@@ -41,60 +42,6 @@ const STEPS = [
     icon: "check" as const,
     title: "Choose who fits",
     body: "Compare profiles, qualifications and reviews. Take a demo class before you commit.",
-  },
-];
-
-/**
- * Example data for the hero preview.
- *
- * Labelled "Example profiles" on the page, because inventing testimonials or
- * implying a supply of tutors we do not have would be a straightforward lie —
- * and the first parent who searched and found nothing would catch it.
- *
- * Fees are in paise, matching how the API returns them (SoT §5).
- */
-const PREVIEW_TUTORS: TutorSummary[] = [
-  {
-    name: "Ananya Reddy",
-    headline: "Physics & Maths, Classes 9–12",
-    subjects: ["Physics", "Mathematics", "CBSE"],
-    rating: 4.9,
-    reviewCount: 34,
-    feeFromPaise: 450000,
-    feeUnit: "PER_MONTH",
-    locality: "Gachibowli",
-    city: "Hyderabad",
-    experienceYears: 8,
-    verified: true,
-    modes: ["STUDENT_HOME", "ONLINE"],
-  },
-  {
-    name: "Rahul Sharma",
-    headline: "JEE Main & Advanced coaching",
-    subjects: ["JEE Main", "Physics", "Chemistry"],
-    rating: 4.8,
-    reviewCount: 51,
-    feeFromPaise: 800000,
-    feeUnit: "PER_MONTH",
-    locality: "Madhapur",
-    city: "Hyderabad",
-    experienceYears: 12,
-    verified: true,
-    modes: ["ONLINE"],
-  },
-  {
-    name: "Meera Iyer",
-    headline: "Spoken English & IELTS",
-    subjects: ["Spoken English", "IELTS"],
-    rating: 4.7,
-    reviewCount: 22,
-    feeFromPaise: 60000,
-    feeUnit: "PER_HOUR",
-    locality: "Kondapur",
-    city: "Hyderabad",
-    experienceYears: 5,
-    verified: true,
-    modes: ["STUDENT_HOME"],
   },
 ];
 
@@ -146,12 +93,12 @@ export default async function Home() {
           aria-hidden="true"
         />
 
-        <Container className="relative py-14 sm:py-20 lg:py-24">
-          <div className="grid items-center gap-12 lg:grid-cols-[minmax(0,1fr)_26rem] lg:gap-16">
+        <Container className="relative py-12 sm:py-16 lg:py-20">
+          <div className="grid items-center gap-12 lg:grid-cols-[minmax(0,1fr)_24rem] lg:gap-14">
             {/* Left: left-aligned, not centred. Centred text forces the eye back
                 to the middle on every line; a hard left edge gives the headline,
                 paragraph and search box one shared axis to scan down. */}
-            <div>
+            <div className="animate-fade-up">
               <Badge tone="brand">
                 <Icon name="location" className="h-3.5 w-3.5" />
                 Home &amp; online tuition across India
@@ -185,33 +132,34 @@ export default async function Home() {
               </div>
             </div>
 
-            {/* Right: the product itself. Hidden below lg — on a phone the
-                headline and search box are what matter, and a decorative stack
-                would push the actual conversion action below the fold. */}
-            <div className="relative hidden lg:block" aria-hidden="true">
-              <div className="space-y-3">
-                {PREVIEW_TUTORS.map((tutor, index) => (
-                  <TutorCard
-                    key={tutor.name}
-                    tutor={tutor}
-                    /* The middle card is the focus: larger, fully opaque, lifted.
-                       The outer two are scaled back and faded so the eye lands in
-                       one place instead of comparing three. */
-                    className={
-                      index === 1
-                        ? "relative z-10 scale-[1.04] shadow-lg ring-brand-200"
-                        : "opacity-70"
-                    }
-                  />
-                ))}
+            {/* Right: the product itself, on a continuous loop.
+
+                Fixed height, and that is the important part. Previously this
+                column was roughly 800px against a 480px left column, and
+                items-center then centred the short one — which is what left the
+                large gap above the headline. Constraining the viewport fixes the
+                alignment and enables the loop at the same time.
+
+                The list is rendered twice and the strip translates by exactly
+                -50%, so the second copy arrives where the first started and the
+                loop has no seam. */}
+            <div className="marquee-host relative hidden lg:block">
+              <div className="marquee-mask h-[32rem] overflow-hidden">
+                <div className="animate-marquee-y space-y-3">
+                  {[...EXAMPLE_TUTORS, ...EXAMPLE_TUTORS].map((tutor, index) => (
+                    <TutorCard
+                      // The duplicate copy needs distinct keys; the index
+                      // disambiguates the two passes over the same data.
+                      key={`${tutor.slug}-${index}`}
+                      tutor={tutor}
+                      href={`/tutors/${tutor.slug}`}
+                    />
+                  ))}
+                </div>
               </div>
 
-              {/* Fades the bottom card out rather than cutting it off, so the
-                  stack reads as continuing rather than ending. */}
-              <div className="pointer-events-none absolute inset-x-0 -bottom-2 h-20 bg-gradient-to-b from-transparent to-[#f2f7ff]" />
-
-              <p className="mt-3 text-center text-xs text-ink-400">
-                Example profiles — real listings open soon
+              <p className="mt-4 text-center text-xs text-ink-400">
+                Example profiles — hover to pause
               </p>
             </div>
           </div>
