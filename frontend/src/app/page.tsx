@@ -1,6 +1,9 @@
 import Link from "next/link";
 import { fetchCities, fetchSubjectTree } from "@/lib/api";
 import { SearchBar } from "@/components/SearchBar";
+import { TutorCard, type TutorSummary } from "@/components/TutorCard";
+import { CategoryIcon, categoryTile } from "@/components/CategoryIcon";
+import { CityIcon } from "@/components/CityIcon";
 import {
   Badge,
   ButtonLink,
@@ -41,6 +44,60 @@ const STEPS = [
   },
 ];
 
+/**
+ * Example data for the hero preview.
+ *
+ * Labelled "Example profiles" on the page, because inventing testimonials or
+ * implying a supply of tutors we do not have would be a straightforward lie —
+ * and the first parent who searched and found nothing would catch it.
+ *
+ * Fees are in paise, matching how the API returns them (SoT §5).
+ */
+const PREVIEW_TUTORS: TutorSummary[] = [
+  {
+    name: "Ananya Reddy",
+    headline: "Physics & Maths, Classes 9–12",
+    subjects: ["Physics", "Mathematics", "CBSE"],
+    rating: 4.9,
+    reviewCount: 34,
+    feeFromPaise: 450000,
+    feeUnit: "PER_MONTH",
+    locality: "Gachibowli",
+    city: "Hyderabad",
+    experienceYears: 8,
+    verified: true,
+    modes: ["STUDENT_HOME", "ONLINE"],
+  },
+  {
+    name: "Rahul Sharma",
+    headline: "JEE Main & Advanced coaching",
+    subjects: ["JEE Main", "Physics", "Chemistry"],
+    rating: 4.8,
+    reviewCount: 51,
+    feeFromPaise: 800000,
+    feeUnit: "PER_MONTH",
+    locality: "Madhapur",
+    city: "Hyderabad",
+    experienceYears: 12,
+    verified: true,
+    modes: ["ONLINE"],
+  },
+  {
+    name: "Meera Iyer",
+    headline: "Spoken English & IELTS",
+    subjects: ["Spoken English", "IELTS"],
+    rating: 4.7,
+    reviewCount: 22,
+    feeFromPaise: 60000,
+    feeUnit: "PER_HOUR",
+    locality: "Kondapur",
+    city: "Hyderabad",
+    experienceYears: 5,
+    verified: true,
+    modes: ["STUDENT_HOME"],
+  },
+];
+
 const TRUST = [
   {
     icon: "shield" as const,
@@ -70,41 +127,93 @@ export default async function Home() {
   return (
     <>
       {/* ---------------------------------------------------------------- */}
-      {/* Hero                                                              */}
+      {/* Hero — asymmetric: the pitch on the left, the product on the right */}
       {/* ---------------------------------------------------------------- */}
+      {/*
+        Showing the result cards rather than describing them. A parent
+        understands "verified tutors near you" in about a second when they can
+        see a verified badge, a rating, a fee and a locality on an actual card —
+        and no amount of body copy achieves that.
+
+        The cards use the real TutorCard component with example data, so this is
+        a preview of the product rather than an illustration of it. The same
+        component renders live search results in M2.
+      */}
       <section className="relative overflow-hidden bg-brand-wash">
         <div className="absolute inset-0 bg-grid opacity-60" aria-hidden="true" />
-        {/* Fades the grid into the white page below so the section does not
-            end on a hard line. */}
         <div
           className="absolute inset-x-0 bottom-0 h-32 bg-gradient-to-b from-transparent to-white"
           aria-hidden="true"
         />
 
-        <Container className="relative py-16 sm:py-24 lg:py-28">
-          <div className="mx-auto max-w-3xl text-center">
-            <Badge tone="brand">
-              <Icon name="location" className="h-3.5 w-3.5" />
-              Home &amp; online tuition across India
-            </Badge>
+        <Container className="relative py-14 sm:py-20 lg:py-24">
+          <div className="grid items-center gap-12 lg:grid-cols-[minmax(0,1fr)_26rem] lg:gap-16">
+            {/* Left: left-aligned, not centred. Centred text forces the eye back
+                to the middle on every line; a hard left edge gives the headline,
+                paragraph and search box one shared axis to scan down. */}
+            <div>
+              <Badge tone="brand">
+                <Icon name="location" className="h-3.5 w-3.5" />
+                Home &amp; online tuition across India
+              </Badge>
 
-            <h1 className="mt-6 text-4xl font-bold leading-[1.1] sm:text-5xl lg:text-6xl">
-              Find the right tutor,{" "}
-              <span className="text-brand-600">right near you</span>
-            </h1>
+              <h1 className="mt-6 text-4xl font-bold leading-[1.05] sm:text-5xl lg:text-[3.5rem]">
+                Find the right tutor,{" "}
+                <span className="text-brand-600">right near you</span>
+              </h1>
 
-            <p className="mx-auto mt-5 max-w-xl text-lg leading-relaxed text-ink-600 sm:text-xl">
-              Apna tutor, apne ghar ke paas. Post what you need for free, and
-              verified tutors in your area will reach out to you.
-            </p>
+              <p className="mt-5 max-w-lg text-lg leading-relaxed text-ink-600">
+                Apna tutor, apne ghar ke paas. Post what you need for free, and
+                verified tutors in your area will reach out to you.
+              </p>
 
-            <div className="mx-auto mt-9 max-w-3xl">
-              <SearchBar cities={cities} />
+              <div className="mt-8">
+                <SearchBar cities={cities} />
+              </div>
+
+              <div className="mt-5 flex flex-wrap items-center gap-x-5 gap-y-2 text-sm text-ink-500">
+                {[
+                  "Free for students",
+                  "Verified tutors",
+                  "Max 5 responses",
+                ].map((point) => (
+                  <span key={point} className="flex items-center gap-1.5">
+                    <Icon name="check" className="h-4 w-4 text-brand-600" />
+                    {point}
+                  </span>
+                ))}
+              </div>
             </div>
 
-            <p className="mt-4 text-sm text-ink-500">
-              Free for students and parents. Always.
-            </p>
+            {/* Right: the product itself. Hidden below lg — on a phone the
+                headline and search box are what matter, and a decorative stack
+                would push the actual conversion action below the fold. */}
+            <div className="relative hidden lg:block" aria-hidden="true">
+              <div className="space-y-3">
+                {PREVIEW_TUTORS.map((tutor, index) => (
+                  <TutorCard
+                    key={tutor.name}
+                    tutor={tutor}
+                    /* The middle card is the focus: larger, fully opaque, lifted.
+                       The outer two are scaled back and faded so the eye lands in
+                       one place instead of comparing three. */
+                    className={
+                      index === 1
+                        ? "relative z-10 scale-[1.04] shadow-lg ring-brand-200"
+                        : "opacity-70"
+                    }
+                  />
+                ))}
+              </div>
+
+              {/* Fades the bottom card out rather than cutting it off, so the
+                  stack reads as continuing rather than ending. */}
+              <div className="pointer-events-none absolute inset-x-0 -bottom-2 h-20 bg-gradient-to-b from-transparent to-[#f2f7ff]" />
+
+              <p className="mt-3 text-center text-xs text-ink-400">
+                Example profiles — real listings open soon
+              </p>
+            </div>
           </div>
         </Container>
       </section>
@@ -143,7 +252,7 @@ export default async function Home() {
       {/* ---------------------------------------------------------------- */}
       {/* Subject categories                                                */}
       {/* ---------------------------------------------------------------- */}
-      <section className="border-y border-ink-200 bg-ink-50 py-16 sm:py-20">
+      <section className="bg-section-tint border-y border-brand-100 py-16 sm:py-20">
         <Container>
           <SectionHeading
             eyebrow="Browse"
@@ -155,9 +264,20 @@ export default async function Home() {
             <div className="mt-10 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
               {categories.map((category) => (
                 <Card key={category.slug} interactive className="p-6">
-                  <h3 className="text-lg font-semibold text-ink-900">
-                    {category.name}
-                  </h3>
+                  <div className="flex items-center gap-3">
+                    {/* Colour-coded tile. The hue is per category and appears
+                        only here — never on a button — so blue stays the single
+                        action colour while categories stay distinguishable at a
+                        glance. */}
+                    <span
+                      className={`flex h-11 w-11 items-center justify-center rounded-xl ${categoryTile(category.slug)}`}
+                    >
+                      <CategoryIcon slug={category.slug} className="h-5.5 w-5.5" />
+                    </span>
+                    <h3 className="text-lg font-semibold text-ink-900">
+                      {category.name}
+                    </h3>
+                  </div>
                   <ul className="mt-4 flex flex-wrap gap-2">
                     {category.children.slice(0, 6).map((child) => (
                       <li key={child.slug}>
@@ -224,16 +344,30 @@ export default async function Home() {
       {cities.length > 0 && (
         <section className="pb-16 sm:pb-20">
           <Container>
-            <h2 className="text-2xl font-bold">Tutors in your city</h2>
-            <div className="mt-6 flex flex-wrap gap-2.5">
+            <SectionHeading
+              eyebrow="Cities"
+              title="Tutors near you"
+              description="Home tuition across India, and online everywhere."
+            />
+
+            {/* Landmark glyphs rather than ten identical pins. A Charminar next
+                to a Gateway of India is recognised before the label is read —
+                and it quietly signals that this product knows these places,
+                which matters when asking a parent for their home address. */}
+            <div className="mt-8 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
               {cities.map((city) => (
                 <Link
                   key={city.slug}
                   href={`/tutors/${city.slug}`}
-                  className="inline-flex items-center gap-1.5 rounded-full bg-white px-4 py-2 text-sm font-medium text-ink-700 ring-1 ring-ink-200 transition-colors hover:bg-brand-50 hover:text-brand-700 hover:ring-brand-300"
+                  className="group flex flex-col items-center gap-2.5 rounded-xl bg-white px-3 py-5 text-center ring-1 ring-ink-200 transition-all hover:-translate-y-0.5 hover:shadow-md hover:ring-brand-300"
                 >
-                  <Icon name="location" className="h-4 w-4 text-ink-400" />
-                  {city.name}
+                  <span className="text-ink-400 transition-colors group-hover:text-brand-600">
+                    <CityIcon slug={city.slug} className="h-8 w-8" />
+                  </span>
+                  <span className="text-sm font-semibold text-ink-800 group-hover:text-brand-700">
+                    {city.name}
+                  </span>
+                  <span className="text-xs text-ink-400">{city.state}</span>
                 </Link>
               ))}
             </div>

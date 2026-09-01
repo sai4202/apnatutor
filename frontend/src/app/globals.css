@@ -142,12 +142,33 @@ p {
 
 /* --- Utilities ----------------------------------------------------------- */
 
-/* The soft blue wash behind hero and section breaks. Kept as a utility so the
-   gradient is defined once rather than re-typed with slightly different stops. */
+/* The soft blue wash behind the hero. Defined once as a utility so the gradient
+   is not re-typed with slightly different stops in three places.
+
+   Three stops rather than one flat tint: a single colour reads as a coloured
+   box, while overlapping fields of slightly different hue read as light falling
+   on the page. The third stop is a barely-there indigo, which stops the whole
+   thing looking like one flat shade of blue.
+
+   Restrained on purpose. An earlier version of this file layered aurora
+   gradients, blurred orbs and film grain on top of each other; it was
+   decoration where the page needed hierarchy, and it was reverted. */
 .bg-brand-wash {
   background-image:
-    radial-gradient(60rem 30rem at 10% -10%, var(--color-brand-100), transparent 60%),
-    radial-gradient(45rem 25rem at 95% 0%, var(--color-brand-50), transparent 55%);
+    radial-gradient(55rem 28rem at 8% -12%, var(--color-brand-100), transparent 58%),
+    radial-gradient(42rem 24rem at 96% -4%, rgb(199 210 254 / 0.55), transparent 55%),
+    radial-gradient(38rem 22rem at 60% 108%, var(--color-brand-50), transparent 60%);
+}
+
+/* A tinted band for alternating sections. Blue-tinted rather than the flat grey
+   it replaced: grey next to a blue page reads as dirty, a blue-grey reads as
+   part of the same system. */
+.bg-section-tint {
+  background-image: linear-gradient(
+    to bottom,
+    rgb(239 246 255 / 0.9),
+    rgb(248 250 252 / 0.9)
+  );
 }
 
 /* Subtle grid, for the hero only. Low-contrast on purpose: it should register
