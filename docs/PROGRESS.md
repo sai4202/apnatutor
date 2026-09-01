@@ -2,8 +2,8 @@
 
 > Update this **in the same session as the code change**, never later. If a session ends without a changelog entry, the next session starts blind.
 
-**Current milestone:** M1 — Accounts, profiles & trust (backend complete, frontend remaining)
-**Overall:** ████░░░ M0 done · **M1 backend complete** (94 tests) · landing page and design system built · M1-11/M1-12 frontend next
+**Current milestone:** M3 — Requirements & the lead loop
+**Overall:** █████░░ M0, M1 and M2 essentially complete · **111 tests** · search, SEO and the tutor onboarding flow all live
 
 ---
 
@@ -11,9 +11,9 @@
 
 Read this first when resuming. Keep it to exactly three, always current.
 
-1. `M2-01` **tutor search** — the query builder with all filters, sorting and pagination. Everything it needs now exists: published profiles, subjects, locations, fees, ratings.
-2. `M2-03` **contact masking**, with `M2-03.3` the priority: tests asserting no unmasked contact detail can appear in any public response. The highest-consequence bug class in the product — a leak here removes the business model rather than degrading it.
-3. `M2-02` index work verified with `EXPLAIN ANALYZE`, then `M2-05` wiring the real search into the `/tutors` page that currently shows an honest empty state.
+1. `M3-01` / `M3-02` — `requirements` and `lead_unlocks` schema, and the lead pricing service. **The unique constraint on `(requirement_id, tutor_id)` and the price being locked at creation are the two things to get right first**, because both are hard to retrofit.
+2. `M3-05` credit ledger and wallet — **append-only** (SoT Invariant 1), with a database-level guard against UPDATE and DELETE. Moved into M3 because the unlock endpoint spends credits and cannot be tested without it.
+3. `M3-07` / `M3-08` the unlock endpoint and its concurrency test: N tutors racing for the last slot, exactly one winner, no loser charged. This is the transaction the whole product rests on.
 
 Full breakdown in [TASKS.md](./TASKS.md); open decisions and debt in [PENDING.md](./PENDING.md).
 
@@ -303,6 +303,33 @@ Steps are **tabs, not a forced sequence**: a tutor who only wants to change thei
 **The dashboard shows zeroes nowhere.** A "0 enquiries" counter reads as *nobody wants you* rather than *not built yet*, and that difference matters to someone deciding whether to finish their profile. The lead feed placeholder says what it is and when it arrives.
 
 **Caught during verification:** the running backend predated M1-07 through M1-10, so the first live check 404'd on every profile route. Restarted, migrations applied to v7, and the path re-verified — profile created at 0%, basics raising it to 25%, `missingForPublish` populated.
+
+### 2026-09-01 — M2: search, masking, and the SEO landing pages
+
+**111 tests pass.** Six of eight M2 tasks complete.
+
+**Search is native SQL**, for two concrete reasons: `teaching_modes` is a Postgres `varchar[]` and JPQL cannot express `= ANY(...)`, and this is the hottest query in the application, so the SQL reaching the planner needs to be the SQL written rather than whatever Hibernate composes. Every value is bound; only the *shape* of the WHERE clause is dynamic. Sort comes from an enum, tested by asking for a sort of `id; DROP TABLE users`.
+
+**Two product decisions worth stating.** An online tutor matches every location filter — they can teach a student in any city, so excluding them would hide exactly the tutors most able to help. And fee bounds compare against a tutor's *starting* fee, not their range, because comparing against the range excludes someone whose lowest rate is inside a parent's budget merely because their highest is not.
+
+**Contact protection is structural, not masking.** Public DTOs carry no contact fields at all — a field that does not exist cannot be leaked by a future edit, whereas a masked field is one careless change from being unmasked. `ContactMasking` exists for the M3 lead feed, where a masked form is shown deliberately.
+
+**SEO.** 714 sitemap URLs from the live catalog. Landing pages are server-rendered with zero client JavaScript, carry JSON-LD, and cross-link to related subjects and other cities — a page nothing links to is a page nothing indexes, and a sitemap alone is a weak signal.
+
+**A combination with no tutors is `noindex, follow`.** Indexing seven hundred empty pages earns a site-wide quality penalty. They stay in the sitemap so they are crawled and ready the moment their first tutor publishes.
+
+#### Bugs found
+
+- `verifiedTutorIds()` had a `.filter(id -> true)` and never checked verification at all. Replaced with a single bulk query mapping user ids to profile ids.
+- **A malformed query parameter returned 500 rather than 400** anywhere in the API. `MethodArgumentTypeMismatchException` fell through to the catch-all handler, so a bad enum or number looked like a server fault. Now a 400 naming the accepted values — without echoing the rejected value back, since that is caller-controlled text.
+
+#### Two deliberate deferrals
+
+`M2-02.4` (index verification under load): with a handful of rows Postgres correctly prefers a sequential scan, so asserting index use today would prove nothing. Needs the M6-04 demo dataset.
+
+`M2-07.2` (locality-level pages): 10 cities × 70 subjects is already 700 pages with no tutors on them. Adding locality depth multiplies thin pages before there is supply to fill them.
+
+> **Process note:** I corrupted `docs/TASKS.md` by round-tripping it through PowerShell's `Set-Content -Encoding utf8`, which double-encoded every non-ASCII character. Restored from git and redone with the editing tool. PowerShell rewrites are not safe for files containing anything outside ASCII.
 
 ---
 

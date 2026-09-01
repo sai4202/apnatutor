@@ -120,6 +120,151 @@ export async function fetchCities(): Promise<City[]> {
   }
 }
 
+/* -------------------------------------------------------------------------- */
+/* Search                                                                      */
+/* -------------------------------------------------------------------------- */
+
+export interface TutorSearchResult {
+  id: number;
+  displayName: string | null;
+  headline: string | null;
+  photoUrl: string | null;
+  experienceYears: number;
+  feeMinPaise: number | null;
+  feeMaxPaise: number | null;
+  feeUnit: "PER_HOUR" | "PER_MONTH" | null;
+  feeNegotiable: boolean;
+  teachingModes: string[];
+  subjects: string[];
+  locality: string | null;
+  avgRating: number | null;
+  reviewCount: number;
+  idVerified: boolean;
+}
+
+export interface Page<T> {
+  content: T[];
+  page: number;
+  size: number;
+  totalElements: number;
+  totalPages: number;
+}
+
+export interface SearchParams {
+  q?: string;
+  subject?: string;
+  location?: string;
+  mode?: string;
+  verifiedOnly?: string;
+  sort?: string;
+  page?: string;
+}
+
+/**
+ * Runs a tutor search.
+ *
+ * Returns an empty page rather than throwing if the backend is unreachable, so
+ * the results page renders its empty state instead of an error screen. A visitor
+ * who sees "no tutors yet" can still post a requirement; one who sees a stack
+ * trace leaves.
+ *
+ * Not cached: results change as tutors publish and edit, and a parent contacting
+ * a tutor who has since gone offline blames us, not the cache.
+ */
+export async function searchTutors(
+  params: SearchParams,
+): Promise<Page<TutorSearchResult>> {
+  const empty: Page<TutorSearchResult> = {
+    content: [],
+    page: 0,
+    size: 20,
+    totalElements: 0,
+    totalPages: 0,
+  };
+
+  const query = new URLSearchParams();
+  for (const [key, value] of Object.entries(params)) {
+    if (value) query.set(key, value);
+  }
+
+  try {
+    const res = await fetch(`${API_BASE_URL}/public/tutors?${query}`, {
+      cache: "no-store",
+    });
+    if (!res.ok) return empty;
+    return (await res.json()) as Page<TutorSearchResult>;
+  } catch {
+    return empty;
+  }
+}
+
+export interface PublicTutorProfile {
+  id: number;
+  displayName: string | null;
+  headline: string | null;
+  bio: string | null;
+  photoUrl: string | null;
+  gender: string | null;
+  experienceYears: number;
+  feeMinPaise: number | null;
+  feeMaxPaise: number | null;
+  feeUnit: "PER_HOUR" | "PER_MONTH" | null;
+  feeNegotiable: boolean;
+  teachingModes: string[];
+  languages: string[];
+  offersDemo: boolean;
+  availabilityNote: string | null;
+  subjects: { subjectId: number; name: string; slug: string | null }[];
+  locations: { locationId: number; displayName: string }[];
+  qualifications: {
+    id: number;
+    degree: string;
+    institution: string;
+    year: number | null;
+    verified: boolean;
+  }[];
+  avgRating: number | null;
+  reviewCount: number;
+  verificationLevel: string;
+  verifiedBadges: string[];
+}
+
+/** A published tutor's public profile. Null for an unknown or unpublished one. */
+export async function fetchTutorProfile(
+  id: number,
+): Promise<PublicTutorProfile | null> {
+  try {
+    const res = await fetch(`${API_BASE_URL}/public/tutors/${id}`, {
+      next: { revalidate: 300 },
+    });
+    if (!res.ok) return null;
+    return (await res.json()) as PublicTutorProfile;
+  } catch {
+    return null;
+  }
+}
+
+/** Resolves a city slug to its display name, for page titles and headings. */
+export async function fetchCity(slug: string): Promise<City | null> {
+  const cities = await fetchCities();
+  return cities.find((city) => city.slug === slug) ?? null;
+}
+
+/** Flattens the subject tree, for SEO page generation and slug lookups. */
+export async function fetchLeafSubjects(): Promise<
+  { id: number; name: string; slug: string; category: string }[]
+> {
+  const tree = await fetchSubjectTree();
+  return tree.flatMap((category) =>
+    category.children.map((child) => ({
+      id: child.id,
+      name: child.name,
+      slug: child.slug,
+      category: category.name,
+    })),
+  );
+}
+
 export type HealthStatus = "UP" | "DOWN" | "UNREACHABLE";
 
 export interface BackendHealth {

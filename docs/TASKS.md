@@ -10,7 +10,7 @@
 |---|---|---|
 | M0 — Foundation | 12 | 12 ☑ |
 | M1 — Accounts, profiles & trust | 12 | 8 ☑, 2 ▶ — **backend complete; frontend M1-11/M1-12 remain** |
-| M2 — Discovery & SEO | 8 | 2 ▶ (frontend built ahead of the API) |
+| M2 — Discovery & SEO | 8 | 6 ☑, 2 ▶ |
 | M3 — Requirements & the lead loop | 11 | 0 |
 | M4 — Credits & payments | 8 | 0 |
 | M5 — Reviews, admin & trust | 10 | 0 |
@@ -156,55 +156,53 @@ Complete 2026-08-31, commit `02208c3`.
 
 **Goal:** a parent finds relevant tutors fast, and a city×subject page ranks.
 
-### ☐ `M2-01` Search service
-- ☐ `M2-01.1` Query builder: subject + location, with filters for fee, mode, gender, experience, rating, verified-only, board, grade
-- ☐ `M2-01.2` Sorting: relevance, rating, fee, experience, recently active
-- ☐ `M2-01.3` Pagination via `PageResponse`
-- ☐ `M2-01.4` Only published, active, non-suspended tutors appear
-- ☐ `M2-01.5` Tests per filter and for filter combinations
+### ☑ `M2-01` Search service
+- ☑ `M2-01.1` Query builder — subject, location, board, grade, mode, fee, gender, experience, rating, verified-only, free text
+- ☑ `M2-01.2` Sorting: relevance, rating, fee both ways, experience, recently active — from an enum, so nothing arbitrary reaches the ORDER BY
+- ☑ `M2-01.3` Pagination via `PageResponse`, size capped at 50
+- ☑ `M2-01.4` `is_published` is not optional and not a parameter
+- ☑ `M2-01.5` 12 integration tests across filters, visibility and paging
 
-### ☐ `M2-02` Search performance
-- ☐ `M2-02.1` GIN/trigram indexes on searchable text
-- ☐ `M2-02.2` Composite indexes for the hot filter paths
-- ☐ `M2-02.3` **`EXPLAIN ANALYZE` on the hot path — no sequential scans**
-- ☐ `M2-02.4` Seed a realistic volume of tutors and re-measure
+### ▶ `M2-02` Search performance
+- ☑ `M2-02.1` GIN trigram index for `ILIKE %term%`, which a btree cannot serve
+- ☑ `M2-02.2` Partial composite indexes per sort order, plus reverse-direction indexes on the join tables the EXISTS subqueries actually probe
+- ☑ `M2-02.3` `explainSearch()` exposed for `EXPLAIN ANALYZE`
+- ☐ `M2-02.4` Seed realistic volume and re-measure — **deferred: with a handful of rows Postgres correctly prefers a sequential scan, so asserting index use today would prove nothing.** Needs the M6-04 demo dataset.
 
-### ☐ `M2-03` Contact masking
-- ☐ `M2-03.1` Single shared masking utility — one implementation, used everywhere
-- ☐ `M2-03.2` Applied at the DTO boundary so an entity can never leak a phone number
-- ☐ `M2-03.3` **Tests asserting no unmasked contact appears in any public response** — this is the single highest-consequence bug class in the product
+### ☑ `M2-03` Contact masking
+- ☑ `M2-03.1` `ContactMasking` — one implementation for phone, name and email
+- ☑ `M2-03.2` **Structural, not masked**: public DTOs carry no contact fields at all, so no code path can leak one
+- ☑ `M2-03.3` Search and profile responses asserted to contain no phone, email, date of birth, document URL or `userId`
 
-### ☐ `M2-04` Public endpoints
-- ☐ `M2-04.1` `GET /public/tutors` search
-- ☐ `M2-04.2` `GET /public/tutors/{slug}` masked profile
-- ☐ `M2-04.3` Cache headers appropriate to public pages
+### ☑ `M2-04` Public endpoints
+- ☑ `M2-04.1` `GET /public/tutors` search, plus `/facets` for sidebar counts
+- ☑ `M2-04.2` `GET /public/tutors/{id}` public profile
+- ☑ `M2-04.3` Cache headers — 5 minutes on search, since a stale result is worse than a slow one
 
-### ▶ `M2-05` Frontend — search
-*Shell built early, ahead of the backend, while designing the site.*
-- ▶ `M2-05.1` Search page with filter sidebar — layout done, filters inert until `M2-01`
-- ☑ `M2-05.2` Result cards — `TutorCard` component, built for real use and previewed with example data
-- ☐ `M2-05.3` Filter state in the URL so results are shareable and back works
-- ▶ `M2-05.4` Empty state done (honest: says there are no tutors rather than faking cards); loading and error states pending
+### ☑ `M2-05` Frontend — search
+- ☑ `M2-05.1` Search page wired to the real endpoint, with a filter sidebar
+- ☑ `M2-05.2` `SearchResultCard` — wider than the hero card, verification badge given real prominence
+- ☑ `M2-05.3` **Filters are links, not checkboxes** — state lives in the URL, so results are shareable, the back button works, and it functions without JavaScript
+- ☑ `M2-05.4` Empty state routes to posting a requirement; "New tutor" rather than a 0.0 rating, which reads as bad instead of new
 
-### ▶ `M2-06` Frontend — tutor profile page
-*Built early against example data. When the profile endpoint lands the lookup becomes a fetch; the page itself does not change.*
-- ☑ `M2-06.1` Full profile layout — about, subjects, qualifications, class details, reviews placeholder
-- ☑ `M2-06.2` "Post your requirement" CTA, and an explanation of why no phone number is shown
-- ☑ `M2-06.3` **No contact detail anywhere on the page** — verified by test in the build check
-- ☐ `M2-06.4` Swap `EXAMPLE_TUTORS` for the real endpoint (PENDING T11)
+### ☑ `M2-06` Frontend — tutor profile page
+- ☑ `M2-06.1` Full profile layout — about, subjects, qualifications, class details
+- ☑ `M2-06.2` CTA plus an explanation of why no phone number is shown
+- ☑ `M2-06.3` No contact detail anywhere on the page
+- ☑ `M2-06.4` Now reads the real endpoint; example profiles survive only at their own slugs and are `noindex`
 
-### ☐ `M2-07` SEO landing pages
-- ☐ `M2-07.1` `/tutors/[city]/[subject]` — server-rendered
-- ☐ `M2-07.2` `/tutors/[city]/[locality]/[subject]` — server-rendered
-- ☐ `M2-07.3` Unique title/meta/H1 per page, generated from real data
-- ☐ `M2-07.4` Internal linking between related city/subject pages
-- ☐ `M2-07.5` **Verify pages render fully with JavaScript disabled**
+### ▶ `M2-07` SEO landing pages
+- ☑ `M2-07.1` `/tutors/[city]/[subject]` — server-rendered, zero client JavaScript
+- ☐ `M2-07.2` `/tutors/[city]/[locality]/[subject]` — **deferred: 10 cities × 70 subjects is already 700 pages with no tutors on them.** Adding locality depth multiplies thin pages before there is supply to fill them.
+- ☑ `M2-07.3` Unique title, meta and H1 per page, generated from live catalog data
+- ☑ `M2-07.4` Internal linking — related subjects in the same city, and the same subject in other cities
+- ☑ `M2-07.5` Renders fully without JavaScript
 
-### ☐ `M2-08` SEO plumbing
-- ☐ `M2-08.1` Generated `sitemap.xml` covering all city×subject combinations
-- ☐ `M2-08.2` `robots.txt`
-- ☐ `M2-08.3` JSON-LD structured data (`Person`/`Service`, `AggregateRating` once reviews exist)
-- ☐ `M2-08.4` Canonical URLs; thin or empty combinations must be `noindex`
+### ☑ `M2-08` SEO plumbing
+- ☑ `M2-08.1` `sitemap.xml` generated from the live catalog — **714 URLs**
+- ☑ `M2-08.2` `robots.txt`, disallowing authenticated areas and the API to protect crawl budget
+- ☑ `M2-08.3` JSON-LD — `Person` with `AggregateRating` on profiles, `Service` on landing pages
+- ☑ `M2-08.4` Canonical URLs; a combination with no tutors is `noindex, follow` until it has something to show
 
 ---
 
