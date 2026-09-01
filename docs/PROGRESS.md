@@ -2,8 +2,8 @@
 
 > Update this **in the same session as the code change**, never later. If a session ends without a changelog entry, the next session starts blind.
 
-**Current milestone:** M1 — Accounts, profiles & trust
-**Overall:** ███░░░░ M0 done · M1: auth + catalog done, profiles next · landing page and design system built
+**Current milestone:** M1 — Accounts, profiles & trust (backend complete, frontend remaining)
+**Overall:** ████░░░ M0 done · **M1 backend complete** (94 tests) · landing page and design system built · M1-11/M1-12 frontend next
 
 ---
 
@@ -11,9 +11,9 @@
 
 Read this first when resuming. Keep it to exactly three, always current.
 
-1. `M1-10` **verification ladder** — `verifications` table, ID and education document submission, admin approve/reject queue, `verification_level` derivation, badges on the public profile. File storage is in place, so this is unblocked.
-2. `M1-07.2` student profile endpoints — small, and the last backend piece of M1.
-3. `M1-11` / `M1-12` — frontend auth screens and the tutor onboarding wizard. The whole M1 backend is now reachable only through Swagger; the wizard is what makes it usable.
+1. `M1-12` **tutor onboarding wizard** — the whole M1 backend is currently reachable only through Swagger. This is what makes it usable: a resumable multi-step form driven by the completeness score and the "what's missing" list the API already returns.
+2. `M1-11.3`/`M1-11.4` — a shared auth provider doing refresh-on-load, and route protection. The login screen works but the session does not survive a reload.
+3. Then **M2**: tutor search (`M2-01`), indexes verified with `EXPLAIN ANALYZE` (`M2-02`), and the contact-masking tests (`M2-03.3`) — the highest-consequence bug class in the product.
 
 Full breakdown in [TASKS.md](./TASKS.md); open decisions and debt in [PENDING.md](./PENDING.md).
 
@@ -265,6 +265,24 @@ Second: the page rendered only the first three categories, which silently hid Mu
 Private files are served `no-store`; public photos cache for 30 days and are immutable, since the key changes when the photo does. Both carry `X-Content-Type-Options: nosniff` and a `sandbox` CSP.
 
 `M1-09.5` (image resize) is deferred — the 5 MB cap is holding, and it is a bandwidth optimisation rather than a correctness one.
+
+### 2026-09-01 — M1-10 verification, M1-07 student profiles. **M1 backend complete.**
+
+**94 tests pass**, up from 79.
+
+**Verification ladder.** Every approval is a deliberate admin act recorded with who and when; nothing approves automatically. A badge granted carelessly is worse than no badge, because it converts our carelessness into a parent's misplaced confidence.
+
+**A deliberate deviation from the task text.** The breakdown described the ladder as PHONE → EMAIL → ID → EDUCATION, each rung requiring the one below. Implemented literally that is wrong here: email is optional because phone is the identity, so a tutor who never added an email could never reach `ID_VERIFIED` — blocking the one badge parents care about, and with it the M4 signup bonus. The ladder is phone → ID → education, with email as its own badge.
+
+**PHONE is not a row in `verifications`** — it lives on `users.phone_verified_at`, written by the OTP flow. Duplicating it would create two sources of truth for the same fact.
+
+**Guarantees at the database level rather than in application code:** a rejection must carry a reason; an approval or rejection must record who and when; one live request per user per type via a partial unique index, so resubmission after rejection stays possible but the queue cannot be flooded. Review is one-shot — re-deciding would overwrite the audit trail that makes a decision defensible.
+
+Tested that an ID document is unreachable publicly (404, not 403 — a 403 confirms the document exists), that the admin route is 401 unauthenticated, and that **a tutor cannot approve their own verification**. The trust model collapses if that ever succeeds.
+
+**Student profiles** are deliberately thin — name and location, both optional. Nothing is required before posting a requirement, because the requirement itself carries subject, budget and area. Every field asked for earlier is a chance to abandon the funnel.
+
+> **Caught while writing tests:** I had defined a no-op `ResultMatcher` named `content()` at the bottom of the verification test, which would have made those assertions silently pass. A test that cannot fail is worse than no test — it reports safety that was never checked.
 
 ---
 

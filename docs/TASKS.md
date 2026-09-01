@@ -9,7 +9,7 @@
 | Milestone | Tasks | Done |
 |---|---|---|
 | M0 — Foundation | 12 | 12 ☑ |
-| M1 — Accounts, profiles & trust | 12 | 7 ☑, 4 ▶ |
+| M1 — Accounts, profiles & trust | 12 | 8 ☑, 2 ▶ — **backend complete; frontend M1-11/M1-12 remain** |
 | M2 — Discovery & SEO | 8 | 2 ▶ (frontend built ahead of the API) |
 | M3 — Requirements & the lead loop | 11 | 0 |
 | M4 — Credits & payments | 8 | 0 |
@@ -101,10 +101,10 @@ Complete 2026-08-31, commit `02208c3`.
 - ☑ `M1-06.5` Unique slugs on subjects and locations, chosen to read naturally in a URL
 - ☑ `M1-06.6` Read-only catalog endpoints under `/api/v1/public/catalog`, cached 6h
 
-### ▶ `M1-07` Student profile
+### ☑ `M1-07` Student profile
 - ☑ `M1-07.1` `V6__profiles.sql` — `student_profiles` (deliberately thin; every field asked for is a chance to abandon the funnel)
-- ☐ `M1-07.2` Create-on-first-login, read, update endpoints
-- ☐ `M1-07.3` Tests
+- ☑ `M1-07.2` Create-on-first-read, read and update endpoints, location validated against the catalog
+- ☑ `M1-07.3` Tests — 5, including tutor-blocked and student-vs-student isolation
 
 ### ☑ `M1-08` Tutor profile
 - ☑ `M1-08.1` `V6__profiles.sql` — `tutor_profiles`, `tutor_subjects`, `tutor_locations`, `tutor_qualifications`
