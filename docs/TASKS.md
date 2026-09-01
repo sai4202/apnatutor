@@ -10,7 +10,7 @@
 |---|---|---|
 | M0 — Foundation | 12 | 12 ☑ |
 | M1 — Accounts, profiles & trust | 12 | 4 ☑, 3 ▶ |
-| M2 — Discovery & SEO | 8 | 0 |
+| M2 — Discovery & SEO | 8 | 2 ▶ (frontend built ahead of the API) |
 | M3 — Requirements & the lead loop | 11 | 0 |
 | M4 — Credits & payments | 8 | 0 |
 | M5 — Reviews, admin & trust | 10 | 0 |
@@ -177,15 +177,19 @@ Complete 2026-08-31, commit `02208c3`.
 - ☐ `M2-04.2` `GET /public/tutors/{slug}` masked profile
 - ☐ `M2-04.3` Cache headers appropriate to public pages
 
-### ☐ `M2-05` Frontend — search
-- ☐ `M2-05.1` Search page with filter sidebar
-- ☐ `M2-05.2` Result cards — photo, rating, fee, modes, verification badges
+### ▶ `M2-05` Frontend — search
+*Shell built early, ahead of the backend, while designing the site.*
+- ▶ `M2-05.1` Search page with filter sidebar — layout done, filters inert until `M2-01`
+- ☑ `M2-05.2` Result cards — `TutorCard` component, built for real use and previewed with example data
 - ☐ `M2-05.3` Filter state in the URL so results are shareable and back works
-- ☐ `M2-05.4` Empty, loading and error states
+- ▶ `M2-05.4` Empty state done (honest: says there are no tutors rather than faking cards); loading and error states pending
 
-### ☐ `M2-06` Frontend — tutor profile page
-- ☐ `M2-06.1` Full profile layout with badges, subjects, fees, reviews placeholder
-- ☐ `M2-06.2` "Post your requirement" call to action (contact is never shown directly)
+### ▶ `M2-06` Frontend — tutor profile page
+*Built early against example data. When the profile endpoint lands the lookup becomes a fetch; the page itself does not change.*
+- ☑ `M2-06.1` Full profile layout — about, subjects, qualifications, class details, reviews placeholder
+- ☑ `M2-06.2` "Post your requirement" CTA, and an explanation of why no phone number is shown
+- ☑ `M2-06.3` **No contact detail anywhere on the page** — verified by test in the build check
+- ☐ `M2-06.4` Swap `EXAMPLE_TUTORS` for the real endpoint (PENDING T11)
 
 ### ☐ `M2-07` SEO landing pages
 - ☐ `M2-07.1` `/tutors/[city]/[subject]` — server-rendered

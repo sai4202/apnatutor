@@ -52,6 +52,7 @@ Taken on knowingly, with the repayment point named. This is not a list of mistak
 | T8 | **Availability as free text** | M1 | v2 scheduling | `M1-08.2` stores availability as a note, not structured slots. Fine while there is no booking; structured slots arrive with the v2 calendar. |
 | T9 | **Access tokens cannot be revoked mid-life** | M1 | Only if abuse demands it | Stateless JWTs are verified by signature, not looked up, which is what makes them cheap. The cost is that suspending a user leaves their current access token working for up to 15 minutes. Refresh is re-checked against account status, so the blast radius is one token lifetime. A revocation list would undo the statelessness; not worth it unless a real incident says otherwise. |
 | T10 | **OTP rate limiting is per phone only** | M1 | `M5-07` | Nothing yet caps requests per IP, so one attacker can walk many numbers. The per-phone cap already prevents running up a bill on any single victim. Proper per-IP buckets are `M5-07.3`. |
+| T11 | **`lib/exampleTutors.ts` is hardcoded sample data** | 2026-09-01 | `M2-06.4` | Three fabricated tutor profiles power the hero marquee and `/tutors/[slug]`. Every surface showing them is labelled as an example, and the profile page carries a banner — but **this module must be deleted, not left behind**, when the real endpoints land. A forgotten sample profile that outlives launch is a fake listing on a live marketplace. Its shape deliberately matches what the search and profile endpoints must return, so the swap is a data-source change. |
 
 ---
 
