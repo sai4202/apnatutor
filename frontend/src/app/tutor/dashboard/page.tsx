@@ -228,10 +228,13 @@ export default function TutorDashboard() {
                       : `${leadCount} enquiry${leadCount === 1 ? "" : " enquiries"} matching what you teach.`}
               </p>
             </div>
-            <div className="rounded-xl bg-brand-50 px-5 py-3 text-center ring-1 ring-brand-200">
+            <Link
+              href="/tutor/wallet"
+              className="rounded-xl bg-brand-50 px-5 py-3 text-center ring-1 ring-brand-200 transition-colors hover:bg-brand-100"
+            >
               <p className="text-2xl font-bold text-brand-700">{balance}</p>
               <p className="text-xs text-brand-900/70">credits</p>
-            </div>
+            </Link>
           </div>
 
           {profile.published && (

@@ -12,10 +12,10 @@
 | M1 — Accounts, profiles & trust | 12 | 8 ☑, 2 ▶ — **backend complete; frontend M1-11/M1-12 remain** |
 | M2 — Discovery & SEO | 8 | 6 ☑, 2 ▶ |
 | M3 — Requirements & the lead loop | 11 | 11 ☑ — **complete, front to back** |
-| M4 — Credits & payments | 8 | 0 |
+| M4 — Credits & payments | 8 | 8 ☑ — **complete, front to back** |
 | M5 — Reviews, admin & trust | 10 | 0 |
 | M6 — Polish & launch | 10 | **deferred at your request** |
-| **V1 total** | **71** (260 subtasks) | **37** |
+| **V1 total** | **71** (260 subtasks) | **45** |
 
 ---
 
@@ -302,53 +302,63 @@ Both were found by walking the money path rather than by a failing test, and bot
 
 **Goal:** money comes in, exactly once, and provably.
 
-### ☐ `M4-01` Packages
-- ☐ `M4-01.1` `V8__packages.sql` — `credit_packages`, `payments`
-- ☐ `M4-01.2` Seed packages — **prices are an unvalidated hypothesis (PENDING.md)**
-- ☐ `M4-01.3` Public package listing endpoint
+### ☑ `M4-01` Packages
+- ☑ `M4-01.1` `V13__packages_and_payments.sql` — `credit_packages`, `payments`, `payment_webhook_events`
+- ☑ `M4-01.2` Packages are **admin-editable rows**, not seed constants — the prices are still a hypothesis (PENDING D3), but being wrong now costs a settings edit rather than a release
+- ☑ `M4-01.3` Package listing endpoint, plus admin create/reprice/retire
+- ☑ `M4-01.4` Retiring the **last** active package is refused — an empty storefront is an outage, not a pricing decision
 
-### ☐ `M4-02` Razorpay checkout
-- ☐ `M4-02.1` SDK integration, keys from env
-- ☐ `M4-02.2` Order creation endpoint, `payments` row in `CREATED`
-- ☐ `M4-02.3` Amounts in paise throughout, matched against the package server-side
-- ☐ `M4-02.4` **Never trust a client-reported amount or success flag**
+### ☑ `M4-02` Razorpay checkout
+- ☑ `M4-02.1` Razorpay over its REST API, keys from env — **no SDK**; it is one POST and two HMACs, and the SDK would add `org.json` and a second HTTP client for less code than it saves
+- ☑ `M4-02.2` Order creation endpoint, `payments` row in `CREATED`
+- ☑ `M4-02.3` Amounts in paise throughout, read from the package server-side
+- ☑ `M4-02.4` **Client-reported amounts are ignored** — a payload claiming ₹999,999 grants exactly the package's credits, and a test says so
+- ☑ `M4-02.5` `StubPaymentGateway` when no keys are configured, so the whole flow was testable before a Razorpay account exists
 
-### ☐ `M4-03` Webhook
-- ☐ `M4-03.1` Endpoint with **signature verification** — reject unsigned or mismatched
-- ☐ `M4-03.2` **Idempotent credit grant: three deliveries of one event grant credits once**
-- ☐ `M4-03.3` Persist raw payload for dispute forensics
-- ☐ `M4-03.4` Handle failed/cancelled payments
-- ☐ `M4-03.5` Reconciliation job for webhooks that never arrive
-- ☐ `M4-03.6` Tests including replay and out-of-order delivery
+### ☑ `M4-03` Webhook
+- ☑ `M4-03.1` Signature verified against the **raw bytes**, constant-time; fails closed on a missing secret, missing header or mismatch
+- ☑ `M4-03.2` **Three deliveries of one event grant credits once** — row lock, `credited_at`, and a unique index, in that order
+- ☑ `M4-03.3` Raw payload persisted, invalid signatures included — a run of those is how anyone learns the endpoint is being probed
+- ☑ `M4-03.4` Failed and cancelled payments handled; a failure arriving *after* a capture does not reverse it
+- ☑ `M4-03.5` `StalePaymentJob` cancels orders never confirmed after two hours; a late webhook still credits them
+- ☑ `M4-03.6` Nine tests: replay, out-of-order delivery, forged and absent signatures, unknown orders, inflated amounts
 
-### ☐ `M4-04` Signup bonus
-- ☐ `M4-04.1` Grant 10 credits at `ID_VERIFIED` (SoT §3.3)
-- ☐ `M4-04.2` **Unique partial index guaranteeing once-only** — not application logic alone
-- ☐ `M4-04.3` 90-day expiry on bonus credits
+### ☑ `M4-04` Signup bonus
+- ☑ `M4-04.1` Granted at `ID_VERIFIED` (SoT §3.3), in `REQUIRES_NEW` so it can never roll back the admin's trust decision
+- ☑ `M4-04.2` **Partial unique index guarantees once-only** — the application check is only the friendly path
+- ☑ `M4-04.3` Expiry from the `credits.bonus_validity_days` setting
 
-### ☐ `M4-05` Credit expiry
-- ☐ `M4-05.1` Scheduled expiry job writing `EXPIRY` ledger entries
-- ☐ `M4-05.2` Purchased 365 days, bonus 90 days
-- ☐ `M4-05.3` Expiry-warning notification
+### ☑ `M4-05` Credit expiry
+- ☑ `M4-05.1` Daily job appending negative `EXPIRY` entries — never editing the grant
+- ☑ `M4-05.2` Validity windows are settings, not constants
+- ☑ `M4-05.3` Expiry warning, one notification per tutor rather than one per grant
+- ☑ `M4-05.4` **Expiry never takes a balance below zero** — spent credits are not clawed back; see the note below
+- ☑ `M4-05.5` `V15__credit_expiry_ledger.sql` — tracking which grants have been processed, outside the ledger
 
-### ☐ `M4-06` Refunds & disputes
-- ☐ `M4-06.1` `V9__refunds.sql` — `refund_requests`
-- ☐ `M4-06.2` Tutor raises a dispute within 7 days, with a reason code
-- ☐ `M4-06.3` Admin decision workflow
-- ☐ `M4-06.4` Approved → `REFUND` ledger entry, unlock marked `REFUNDED`, **cap slot freed**
-- ☐ `M4-06.5` Abuse signal: flag tutors whose dispute rate exceeds 30%
+### ☑ `M4-06` Refunds & disputes
+- ☑ `M4-06.1` `V14__refunds.sql` — `refund_requests`
+- ☑ `M4-06.2` Tutor raises a dispute within the (configurable) window, with a reason code; one per unlock, enforced by a unique index
+- ☑ `M4-06.3` Admin queue and decision workflow; a rejection **requires** a note
+- ☑ `M4-06.4` Approved → `REFUND` ledger entry, unlock `REFUNDED`, **cap slot freed and the enquiry reopened**
+- ☑ `M4-06.5` Two abuse signals, both flagging rather than blocking: a tutor's dispute rate, and a requirement several tutors have disputed
 
-### ☐ `M4-07` Invoices
-- ☐ `M4-07.1` Receipt generation and download
-- ☐ `M4-07.2` GST fields — **needed from day one? open question (PENDING.md)**
+### ☑ `M4-07` Invoices
+- ☑ `M4-07.1` Receipt endpoint and a printable receipt — **no PDF library**; the browser prints, and "save as PDF" is a dialog every user already knows
+- ☑ `M4-07.2` GST fields present and nullable. **The question is still open (PENDING D6)** — the fields exist now because retrofitting tax onto historical transactions is genuinely unpleasant, and cost nothing to add
 
-### ☐ `M4-08` Frontend — wallet
-- ☐ `M4-08.1` Package selection and checkout
-- ☐ `M4-08.2` Razorpay checkout integration
-- ☐ `M4-08.3` Success/failure/pending states — pending is the one that gets forgotten
-- ☐ `M4-08.4` Transaction history with running balance
-- ☐ `M4-08.5` Low-balance prompt at the point of unlock
-- ☐ `M4-08.6` Dispute-raising UI
+### ☑ `M4-08` Frontend — wallet
+- ☑ `M4-08.1` Package selection and checkout
+- ☑ `M4-08.2` Razorpay widget, opened with the server's order and the publishable key only
+- ☑ `M4-08.3` Success / failure / **pending** — pending gets first-class treatment because the webhook, not the browser, is what credits the wallet
+- ☑ `M4-08.4` Ledger history with a running balance
+- ☑ `M4-08.5` Low-balance prompt at the point of unlock — the button *becomes* "Top up to unlock" rather than going dead
+- ☑ `M4-08.6` Dispute UI on the tutor's own leads, deliberately not buried
+
+### Two notes worth keeping
+
+**A design the database rejected, correctly.** The expiry job first recorded a zero-amount `EXPIRY` entry against grants that had been fully spent before lapsing, purely so it would not reprocess them forever. `credit_transactions_amount_nonzero` refused it. The constraint was right: a zero-amount entry is not a movement of money. "Which grants have been through expiry" is bookkeeping *about* the ledger, not an entry in it, so it moved to `credit_grant_expiries` (V15).
+
+**Expiry is capped at the current balance.** Credits are fungible, so a tutor granted 10 who has spent 8 still has a 10-credit grant on record when it lapses. Writing off the full 10 would take them to −2 and bill them for credits they already used and paid for. The deliberate consequence: spent credits are never clawed back, and given the choice the platform takes the loss.
 
 ---
 

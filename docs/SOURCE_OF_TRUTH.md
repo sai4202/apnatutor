@@ -104,10 +104,30 @@ The fan-out is capped at **4× the enquiry's own unlock cap**, ordered by approv
 | Access token | 15 minutes |
 
 ### 3.5 Refunds
-- Tutor may dispute an unlock within **7 days**.
-- Valid grounds: phone unreachable/invalid, wrong subject or locality, student says they never posted it, duplicate of another requirement.
-- Admin decides. Approved → credits returned to ledger with reason `REFUND`, unlock marked `REFUNDED`, cap slot freed.
-- A tutor whose dispute-approval rate is healthy but whose *dispute volume* exceeds 30% of unlocks gets flagged for admin review (abuse signal in both directions).
+- Tutor may dispute an unlock within the `refunds.window_days` setting (**7 days** by default). The window exists because a dispute weeks later cannot be investigated — neither party remembers the call with any precision.
+- Grounds are a **fixed set of codes**, not free text: `WRONG_NUMBER`, `UNREACHABLE`, `ALREADY_HIRED`, `NOT_LOOKING`, `DUPLICATE_REQUIREMENT`, `WRONG_SUBJECT_OR_AREA`, `ABUSIVE`, `OTHER`. Free text describes one bad lead; a code lets the platform find the enquiries that keep producing them.
+- One dispute per unlock, enforced by a unique index. Otherwise a tutor could be refunded more than they were charged.
+- Admin decides. Approved → credits returned with reason `REFUND`, unlock marked `REFUNDED`, **cap slot freed and the requirement reopened if it had capped**. A parent promised five responses who got one unusable one should end up with five usable ones.
+- **Refunded credits carry no expiry.** They were paid for once already; a fresh clock would be a second penalty for a lead that was not the tutor's fault.
+- **A rejection requires a note.** A rejection with no reason is one a tutor can neither argue with nor learn from, and it is where the belief that disputes are pointless comes from.
+- Two abuse signals, both **flagging rather than blocking**: a tutor's dispute rate above 30% (over at least 5 disputes), and — the stronger one — a requirement disputed by 3 or more different tutors. One tutor disputing many leads may just be bad at phone calls; three tutors disputing the same enquiry is a fact about the enquiry. A hard cutoff would punish exactly the tutor whose leads really are bad.
+
+### 3.5a Buying credits
+
+The rule everything serves: **credits are granted exactly once, only for money a provider confirmed, and it stays provable afterwards.**
+
+- **Packages are rows** (`credit_packages`), editable by an admin. `payments` copies the credits and amount at order time and never reads them back through the foreign key, so a repricing cannot rewrite an existing receipt. Retiring keeps a package resolvable; retiring the last active one is refused.
+- **Nothing the client sends is trusted.** The amount and credits come from the package row. The checkout signature the browser reports is verified only to update the UI — the signed webhook is the authority, because a browser can close mid-payment and on mobile constantly does.
+- **Once-only crediting has three layers**: the payment row loaded `FOR UPDATE`, `payments.credited_at`, and a unique index on `(provider, provider_payment_id)`. Repeat deliveries are normal provider behaviour, not a fault.
+- **The webhook endpoint is unauthenticated** by necessity, so the HMAC signature is the only control. It is computed over the raw bytes as received, compared in constant time, and **fails closed** — a missing secret, missing header or mismatch all reject. Every delivery is recorded with its raw payload, invalid ones included.
+- Orders never confirmed are cancelled after 2 hours. `CANCELLED` is not terminal for crediting: a late webhook still credits, because money that arrives late is still money that arrived.
+
+### 3.5b Credit expiry
+
+- Expiry appends a negative `EXPIRY` entry; the original grant is never edited (Invariant 1).
+- **Write-offs are capped at the current balance.** Credits are fungible, so a tutor granted 10 who has spent 8 still has a 10-credit grant on record when it lapses. Writing off the full 10 would take them to −2 and bill them for credits they already used and paid for. Spent credits are never clawed back — given the choice, the platform takes the loss.
+- Which grants have been processed is tracked in `credit_grant_expiries`, **not** by looking for a compensating ledger entry. A grant fully spent before it lapsed produces no entry, because nothing moved, and `credit_transactions_amount_nonzero` rightly refuses a zero-amount one.
+- Tutors are warned 14 days ahead, **once per tutor** rather than once per grant.
 
 ### 3.6 Reviews
 - Only a student who **unlocked or was unlocked by** that tutor may review them. One review per student-tutor pair.

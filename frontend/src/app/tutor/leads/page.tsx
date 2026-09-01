@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { useAuth } from "@/lib/auth";
 import { ErrorBanner } from "@/components/RequireRole";
-import { Badge, Button, Container, Icon } from "@/components/ui";
+import { Badge, Button, ButtonLink, Container, Icon } from "@/components/ui";
 
 /**
  * The tutor lead feed and the unlock flow.
@@ -39,6 +39,7 @@ interface LeadPreview {
 
 interface UnlockedLead {
   id: number;
+  unlockId: number;
   subject: string | null;
   area: string | null;
   mode: string;
@@ -49,7 +50,26 @@ interface UnlockedLead {
   studentPhone: string | null;
   creditsSpent: number;
   unlockedAt: string;
+  disputed: boolean;
 }
+
+/**
+ * Why a tutor is disputing a lead.
+ *
+ * Codes, not free text — the point of collecting reasons is to count them,
+ * so the platform can find the requirements generating bad leads. The labels
+ * are phrased as the tutor would say it, not as the database stores it.
+ */
+const DISPUTE_REASONS: { value: string; label: string }[] = [
+  { value: "WRONG_NUMBER", label: "The number does not exist or is wrong" },
+  { value: "UNREACHABLE", label: "Called several times, no answer" },
+  { value: "ALREADY_HIRED", label: "They had already found a tutor" },
+  { value: "NOT_LOOKING", label: "They said they never wanted a tutor" },
+  { value: "DUPLICATE_REQUIREMENT", label: "I already paid for this same enquiry" },
+  { value: "WRONG_SUBJECT_OR_AREA", label: "Not the subject or area advertised" },
+  { value: "ABUSIVE", label: "The contact was abusive" },
+  { value: "OTHER", label: "Something else" },
+];
 
 const MODE_LABELS: Record<string, string> = {
   STUDENT_HOME: "At student's home",
@@ -77,6 +97,10 @@ export default function LeadFeedPage() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [justUnlocked, setJustUnlocked] = useState<UnlockedLead | null>(null);
+  const [disputing, setDisputing] = useState<UnlockedLead | null>(null);
+  const [disputeReason, setDisputeReason] = useState(DISPUTE_REASONS[0].value);
+  const [disputeDetails, setDisputeDetails] = useState("");
+  const [disputeFiled, setDisputeFiled] = useState(false);
 
   const load = useCallback(async () => {
     try {
@@ -145,6 +169,42 @@ export default function LeadFeedPage() {
     }
   }
 
+  async function fileDispute(lead: UnlockedLead) {
+    setBusy(true);
+    setError(null);
+    try {
+      const res = await authFetch("/tutor/refunds", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          unlockId: lead.unlockId,
+          reason: disputeReason,
+          details: disputeDetails || null,
+        }),
+      });
+      const body = await res.json();
+
+      if (!res.ok) {
+        setError(
+          body.code === "REFUND_NOT_ALLOWED"
+            ? body.message
+            : "Could not raise that dispute.",
+        );
+        setDisputing(null);
+        return;
+      }
+
+      setDisputing(null);
+      setDisputeDetails("");
+      setDisputeFiled(true);
+      await load();
+    } catch {
+      setError("Could not reach the server.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
   if (!leads) {
     return (
       <Container className="flex min-h-[60vh] items-center justify-center">
@@ -165,11 +225,16 @@ export default function LeadFeedPage() {
               </p>
             </div>
             {/* Balance is always visible. A tutor deciding whether to spend
-                should never have to navigate away to find out what they have. */}
-            <div className="rounded-xl bg-brand-50 px-5 py-3 text-center ring-1 ring-brand-200">
+                should never have to navigate away to find out what they have —
+                and it links to the wallet, so topping up is one tap from the
+                moment they discover they cannot afford a lead. */}
+            <Link
+              href="/tutor/wallet"
+              className="rounded-xl bg-brand-50 px-5 py-3 text-center ring-1 ring-brand-200 transition-colors hover:bg-brand-100"
+            >
               <p className="text-2xl font-bold text-brand-700">{balance}</p>
               <p className="text-xs text-brand-900/70">credits</p>
-            </div>
+            </Link>
           </div>
 
           <div className="mt-6 flex gap-2">
@@ -325,18 +390,26 @@ export default function LeadFeedPage() {
                     </span>
                   </div>
 
-                  <Button
-                    disabled={busy || balance < lead.unlockCostCredits}
-                    onClick={() => {
-                      setConfirming(lead);
-                      setError(null);
-                    }}
-                  >
-                    {balance < lead.unlockCostCredits
-                      ? "Not enough credits"
-                      : "Unlock contact details"}
-                    <Icon name="arrow" className="h-4 w-4" />
-                  </Button>
+                  {/* When they cannot afford it, the button becomes the way to
+                      fix that. A disabled "Not enough credits" is a dead end at
+                      exactly the moment the tutor wanted to spend money. */}
+                  {balance < lead.unlockCostCredits ? (
+                    <ButtonLink href="/tutor/wallet">
+                      Top up to unlock
+                      <Icon name="wallet" className="h-4 w-4" />
+                    </ButtonLink>
+                  ) : (
+                    <Button
+                      disabled={busy}
+                      onClick={() => {
+                        setConfirming(lead);
+                        setError(null);
+                      }}
+                    >
+                      Unlock contact details
+                      <Icon name="arrow" className="h-4 w-4" />
+                    </Button>
+                  )}
                 </div>
               </section>
             ))
@@ -352,7 +425,7 @@ export default function LeadFeedPage() {
           ) : (
             myLeads.map((lead) => (
               <section
-                key={lead.id}
+                key={lead.unlockId}
                 className="panel bg-white p-6 ring-1 ring-ink-200/70"
               >
                 <div className="flex flex-wrap items-start justify-between gap-4">
@@ -372,6 +445,27 @@ export default function LeadFeedPage() {
                     >
                       Call {lead.studentPhone}
                     </a>
+                  )}
+                </div>
+
+                {/* Deliberately here rather than buried in a help page. A refund
+                    path that is hard to find is one the tutor concludes does not
+                    exist, and that belief is what stops the next purchase. */}
+                <div className="mt-4 border-t border-ink-100 pt-3">
+                  {lead.disputed ? (
+                    <Badge tone="neutral">Dispute under review</Badge>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setDisputing(lead);
+                        setDisputeReason(DISPUTE_REASONS[0].value);
+                        setError(null);
+                      }}
+                      className="text-sm font-medium text-ink-500 hover:text-danger-600"
+                    >
+                      This lead was no good
+                    </button>
                   )}
                 </div>
               </section>
@@ -431,6 +525,85 @@ export default function LeadFeedPage() {
               </Button>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* Raising a dispute. Reasons are a fixed list because the platform needs
+          to count them — free text tells us about one bad lead, a code tells us
+          which enquiries keep producing them. */}
+      {disputing && (
+        <div className="fixed inset-0 z-50 flex items-end justify-center bg-ink-900/50 p-4 sm:items-center">
+          <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-lg">
+            <h2 className="text-xl font-bold">What went wrong?</h2>
+            <p className="mt-2 text-sm leading-relaxed text-ink-600">
+              If this lead was not what it claimed to be, we will return the{" "}
+              {disputing.creditsSpent} credits. A person reads every dispute.
+            </p>
+
+            <div className="mt-5 space-y-1.5">
+              {DISPUTE_REASONS.map((option) => (
+                <label
+                  key={option.value}
+                  className={`flex cursor-pointer items-center gap-3 rounded-lg px-3 py-2.5 text-sm ring-1 transition-colors ${
+                    disputeReason === option.value
+                      ? "bg-brand-50 text-brand-800 ring-brand-300"
+                      : "text-ink-700 ring-ink-200 hover:bg-ink-50"
+                  }`}
+                >
+                  <input
+                    type="radio"
+                    name="disputeReason"
+                    value={option.value}
+                    checked={disputeReason === option.value}
+                    onChange={() => setDisputeReason(option.value)}
+                    className="sr-only"
+                  />
+                  {option.label}
+                </label>
+              ))}
+            </div>
+
+            <textarea
+              rows={2}
+              value={disputeDetails}
+              onChange={(e) => setDisputeDetails(e.target.value)}
+              placeholder="Anything else that would help us check (optional)"
+              className="mt-4 w-full rounded-lg bg-white p-3 text-sm ring-1 ring-ink-300 focus:outline-none focus:ring-2 focus:ring-brand-600"
+            />
+
+            <div className="mt-5 flex gap-3">
+              <Button
+                className="flex-1"
+                disabled={busy}
+                onClick={() => void fileDispute(disputing)}
+              >
+                {busy ? "Sending…" : "Raise dispute"}
+              </Button>
+              <Button
+                variant="secondary"
+                disabled={busy}
+                onClick={() => setDisputing(null)}
+              >
+                Cancel
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {disputeFiled && (
+        <div className="fixed inset-x-0 bottom-4 z-50 mx-auto w-[calc(100%-2rem)] max-w-md rounded-xl bg-ink-900 px-5 py-4 text-white shadow-lg">
+          <p className="text-sm">
+            Dispute raised. We will look into it and let you know — usually
+            within a working day.
+          </p>
+          <button
+            type="button"
+            onClick={() => setDisputeFiled(false)}
+            className="mt-2 text-xs font-medium text-white/70 hover:text-white"
+          >
+            Dismiss
+          </button>
         </div>
       )}
     </Container>

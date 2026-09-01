@@ -2,8 +2,8 @@
 
 > Update this **in the same session as the code change**, never later. If a session ends without a changelog entry, the next session starts blind.
 
-**Current milestone:** M4 — Credits & payments
-**Overall:** ██████░ M0–M3 complete · **154 tests** · **the lead loop works end to end in the browser**: a parent posts an enquiry, matching tutors are notified, a tutor spends credits and gets the phone number
+**Current milestone:** M5 — Reviews, admin & trust
+**Overall:** ███████ M0–M4 complete · **187 tests** · **the full money path works**: a parent posts free, matching tutors are notified, a tutor buys credits, unlocks the lead, gets the phone number, and can dispute it if it was worthless
 
 ---
 
@@ -11,11 +11,11 @@
 
 Read this first when resuming. Keep it to exactly three, always current.
 
-1. `M4-01` / `M4-02` — credit packages as **admin-configurable rows**, not seeded constants, then the Razorpay order + signature-verified webhook. Packages being configurable is what took D3/D4/D6 off the critical path.
-2. `M4-04` / `M4-05` — signup bonus and credit expiry (`M3-05.8` was deferred into here: nothing can expire until credits can be bought).
-3. `M5` — reviews with moderation, the admin console, rate limiting, audit log, DPDP export/delete.
+1. `M5-01` / `M5-02` / `M5-03` — reviews with moderation and tutor replies, plus rating aggregation. Eligibility keys off `lead_unlocks`, which is why that table was made generic.
+2. `M5-04` … `M5-06` — the admin console. Verification, refunds and settings all have endpoints already; this is the screen that ties them together so nobody has to touch the database.
+3. `M5-07` / `M5-08` / `M5-09` — rate limiting (repays debt T10), audit log, abuse reporting, DPDP export and delete.
 
-M6 is deferred at the user's request. Full breakdown in [TASKS.md](./TASKS.md); open decisions and debt in [PENDING.md](./PENDING.md).
+M6 is deferred at your request. Full breakdown in [TASKS.md](./TASKS.md); open decisions and debt in [PENDING.md](./PENDING.md).
 
 ---
 
@@ -27,13 +27,39 @@ M6 is deferred at the user's request. Full breakdown in [TASKS.md](./TASKS.md); 
 | M1 — Accounts, profiles & trust | ✅ Done |
 | M2 — Catalog & discovery | ✅ Done (2 subtasks deliberately deferred) |
 | M3 — Requirements & lead loop | ✅ Done (2026-09-01) |
-| M4 — Credits & payments | 🟡 Next |
-| M5 — Reviews, admin & trust | ⬜ Not started |
+| M4 — Credits & payments | ✅ Done (2026-09-01) |
+| M5 — Reviews, admin & trust | 🟡 Next |
 | M6 — Polish & launch | ⏸️ Deferred at your request |
 
 ---
 
 ## Changelog
+
+### 2026-09-01 — M4 closed: money in, exactly once, and provably
+
+**187 tests pass**, up from 154. Migrations V13, V14, V15.
+
+Everything in M4 serves one claim: credits are granted exactly once, only for money a provider confirmed, and it stays provable months later.
+
+**Packages are admin-editable rows, per your instruction.** The prices are still a hypothesis (PENDING D3), but being wrong now costs a settings edit rather than a release. `payments` copies the credits and amount at order time, so a repricing next month cannot rewrite what someone paid today. Retiring the last active package is refused — an empty storefront is an outage, not a pricing decision.
+
+**The browser is never believed.** Razorpay's widget calls back into the page on success, and crediting there would be crediting on a request the user's own browser makes. Amounts and packages are read server-side; a payload claiming ₹999,999 grants exactly the package's credits, and there is a test for it. The checkout signature is verified only to move the UI along.
+
+**Once-only crediting, in three layers**: the payment row loaded `FOR UPDATE`, `credited_at` on the row, and a unique index on `(provider, provider_payment_id)`. Three deliveries of one event grant once; so do `payment.captured` and `order.paid` for the same purchase, which event-id deduplication alone would miss.
+
+**The webhook endpoint is unauthenticated by necessity** — Razorpay holds no credential of ours — so the HMAC is the only thing between it and free credits. It fails closed on a missing secret, a missing header or a mismatch, compares in constant time, and records every attempt with its raw body. Rejected deliveries are kept: a run of them is how anyone learns the endpoint is being probed.
+
+**`WebhookEventRecorder` is a separate bean.** Third time this trap has come up here: `@Transactional` is proxy-applied, so `REQUIRES_NEW` on a self-invoked method does nothing at all, and the audit row would roll back with the failure it was recording.
+
+**A stub gateway** meant the whole flow was built and tested before any Razorpay account exists. It verifies signatures against a fixed secret rather than accepting everything — a stub that trusted every request would let a signature bug reach production behind a green suite. `DevModeGuard` now refuses to start under a `prod` profile with no Razorpay keys: that combination looks like a perfectly healthy deployment while the stub quietly issues credits for money that never moved.
+
+**A design the database rejected, correctly.** The expiry job first wrote a zero-amount `EXPIRY` entry against grants spent before they lapsed, purely to avoid reprocessing them. `credit_transactions_amount_nonzero` refused it. The constraint was right and the design was wrong — "which grants have been through expiry" is bookkeeping about the ledger, not an entry in it, so it moved to its own table in V15.
+
+**Expiry never takes a balance below zero.** Credits are fungible, so a 10-credit grant is still on record after 8 are spent; writing off the full 10 would bill the tutor for credits they already used. Spent credits are never clawed back — given the choice, the platform takes the loss.
+
+**Refunds free the cap slot.** The property easiest to forget, and the one with a test named for it. A parent promised five responses who got one unusable one should end up with five usable ones. Approval also reopens a requirement that had capped out. Refunded credits carry no fresh expiry: they were paid for once already.
+
+Also shipped: signup bonus (guaranteed once by a partial unique index, not by the check preceding it), stale-order cleanup, dispute reasons as countable codes, two abuse signals that flag rather than block, a printable receipt with no PDF dependency, and the tutor wallet UI in which "not enough credits" is a link to top up rather than a dead button.
 
 ### 2026-09-01 — M3 closed: the lead loop works in a browser
 
