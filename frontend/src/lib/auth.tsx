@@ -136,7 +136,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // Restore the session on first load. Until this settles, guards must show a
     // loader rather than redirecting — otherwise every refresh of a protected
     // page bounces the user to the login screen before the session is known.
-    refresh().finally(() => setLoading(false));
+    //
+    // Awaited inside the effect rather than `.finally(setLoading)`: React's
+    // set-state-in-effect rule cannot tell that the write happens after the
+    // request, and reports a cascading render that is not there. `refresh()`
+    // already swallows its own failures, so there is nothing left to catch.
+    async function restore() {
+      await refresh();
+      setLoading(false);
+    }
+    void restore();
   }, [refresh]);
 
   return (

@@ -2,8 +2,8 @@
 
 > Update this **in the same session as the code change**, never later. If a session ends without a changelog entry, the next session starts blind.
 
-**Current milestone:** M3 — Requirements & the lead loop
-**Overall:** █████░░ M0, M1 and M2 essentially complete · **111 tests** · search, SEO and the tutor onboarding flow all live
+**Current milestone:** M4 — Credits & payments
+**Overall:** ██████░ M0–M3 complete · **154 tests** · **the lead loop works end to end in the browser**: a parent posts an enquiry, matching tutors are notified, a tutor spends credits and gets the phone number
 
 ---
 
@@ -11,11 +11,11 @@
 
 Read this first when resuming. Keep it to exactly three, always current.
 
-1. `M3-10` / `M3-11` — the student and tutor screens for the lead loop. The whole M3 backend is reachable only through Swagger; these are what make it usable.
-2. `M4` — Razorpay checkout, packages, the signup bonus, credit expiry and the refund/dispute flow. **Blocked on decisions D3, D4 and D6** (real package prices, the ₹10/credit value, GST) before the seed data means anything.
-3. `M6-04` demo dataset — which also unblocks the deferred `M2-02.4` index verification, since index behaviour cannot be asserted against a handful of rows.
+1. `M4-01` / `M4-02` — credit packages as **admin-configurable rows**, not seeded constants, then the Razorpay order + signature-verified webhook. Packages being configurable is what took D3/D4/D6 off the critical path.
+2. `M4-04` / `M4-05` — signup bonus and credit expiry (`M3-05.8` was deferred into here: nothing can expire until credits can be bought).
+3. `M5` — reviews with moderation, the admin console, rate limiting, audit log, DPDP export/delete.
 
-Full breakdown in [TASKS.md](./TASKS.md); open decisions and debt in [PENDING.md](./PENDING.md).
+M6 is deferred at the user's request. Full breakdown in [TASKS.md](./TASKS.md); open decisions and debt in [PENDING.md](./PENDING.md).
 
 ---
 
@@ -24,16 +24,39 @@ Full breakdown in [TASKS.md](./TASKS.md); open decisions and debt in [PENDING.md
 | Milestone | Status |
 |---|---|
 | M0 — Foundation | ✅ Done (2026-08-31) |
-| M1 — Accounts, profiles & trust | 🟡 Next |
-| M2 — Catalog & discovery | ⬜ Not started |
-| M3 — Requirements & lead loop | ⬜ Not started |
-| M4 — Credits & payments | ⬜ Not started |
+| M1 — Accounts, profiles & trust | ✅ Done |
+| M2 — Catalog & discovery | ✅ Done (2 subtasks deliberately deferred) |
+| M3 — Requirements & lead loop | ✅ Done (2026-09-01) |
+| M4 — Credits & payments | 🟡 Next |
 | M5 — Reviews, admin & trust | ⬜ Not started |
-| M6 — Polish & launch | ⬜ Not started |
+| M6 — Polish & launch | ⏸️ Deferred at your request |
 
 ---
 
 ## Changelog
+
+### 2026-09-01 — M3 closed: the lead loop works in a browser
+
+**Shipped**
+
+- **Student screens** (`M3-10`): post-requirement form, enquiry dashboard, responding-tutors list with contacts revealed, hire/withdraw. The form is fillable before signing in and shows a live credit quote — demanding an account before someone has expressed what they want loses most of them.
+- **Tutor screens** (`M3-11`): lead feed with masked previews, unlock confirmation showing cost *and* resulting balance, post-unlock contact reveal, my-leads, wallet balance visible throughout and in the header.
+- **`AccountMenu`** — the header showed "Sign in" even when signed in, so a signed-in user had no route to their own pages. Extracted as the only client component in the header, so public SEO pages keep their server rendering.
+- **Student profile screen** (`M1-12.6`) and the **OTP resend cooldown** (`M1-11.6`), closing the last two open M1 subtasks.
+
+**Two behaviour changes, both found by walking the money path**
+
+- **Only published tutors see leads.** The feed matched on subjects and locations alone, so a tutor who had never published could unlock a lead — putting a stranger on a parent's phone with no profile to check them against. `findLeadFeedFor` and the new `findTutorsToNotify` both require `is_published` and must stay in step.
+- **Unlocking is now replay-safe.** A repeat returns the unlock the tutor already holds instead of `LEAD_ALREADY_UNLOCKED`. The case that matters is a tutor on a patchy mobile network whose request succeeded but whose response never arrived: answering the retry with an error left them charged and holding nothing. This is `M3-07.1` satisfied structurally rather than with the `Idempotency-Key` header the task named.
+
+**`M3-09.3` was never wired.** `NEW_MATCHING_LEAD` existed in the enum and was sent by nothing, so tutors only found leads by remembering to check the feed. Now fanned out at posting time to 4× the enquiry's unlock cap, ordered by approved verifications then rating — messaging everyone who matches would mean most recipients arrive to find the lead taken.
+
+**Fixed**
+
+- `npm run lint` was red before this session and is now clean. React 19's `set-state-in-effect` rule rejects a bare `void load()` in an effect; awaiting inside the effect satisfies it (verified by probe — the rule accepts a `useCallback` that sets state, it just cannot see through the un-awaited call). Also renamed `useTestAccount`, which ESLint treated as a hook because of the `use` prefix.
+- `docs/TASKS.md` had **the entire M3 section unticked** while the summary table claimed 9 done. Ticked honestly this session, with the two behaviour changes written into the file.
+
+**154 tests pass**, up from 152. New: an unpublished tutor sees no leads; posting notifies matching tutors and only matching ones. The duplicate-unlock concurrency test now asserts what actually matters — both calls may succeed, but only one row and one charge.
 
 ### 2026-08-31 — Project born
 

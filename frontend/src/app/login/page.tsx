@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { API_BASE_URL } from "@/lib/api";
@@ -43,6 +43,15 @@ interface ApiErrorBody {
   message: string;
 }
 
+/**
+ * How long before "Resend code" is offered again.
+ *
+ * Thirty seconds is roughly the tail of SMS delivery on a congested Indian
+ * network — long enough that a resend is genuinely warranted by the time it is
+ * offered, short enough not to feel like a punishment.
+ */
+const RESEND_COOLDOWN_SECONDS = 30;
+
 export default function LoginPage() {
   const { signIn } = useAuth();
   const router = useRouter();
@@ -55,6 +64,16 @@ export default function LoginPage() {
   const [signedInAs, setSignedInAs] = useState<string | null>(null);
   /** Non-null only when the backend is running in dev mode. */
   const [devCode, setDevCode] = useState<string | null>(null);
+  /** Seconds until "Resend code" becomes available again. */
+  const [resendIn, setResendIn] = useState(0);
+
+  // One interval for the whole countdown rather than a timeout per second, so
+  // leaving the page mid-countdown cannot leave a timer running.
+  useEffect(() => {
+    if (resendIn <= 0) return;
+    const id = setInterval(() => setResendIn((s) => Math.max(0, s - 1)), 1000);
+    return () => clearInterval(id);
+  }, [resendIn]);
 
   async function call(path: string, body: unknown): Promise<Response> {
     return fetch(`${API_BASE_URL}${path}`, {
@@ -90,6 +109,7 @@ export default function LoginPage() {
         setCode(body.devCode);
         setDevCode(body.devCode);
       }
+      setResendIn(RESEND_COOLDOWN_SECONDS);
       setStep("code");
     } catch {
       setError("Could not reach the server. Is the backend running?");
@@ -98,8 +118,13 @@ export default function LoginPage() {
     }
   }
 
-  /** Fills a seeded test account and immediately requests its code. */
-  function useTestAccount(
+  /**
+   * Fills a seeded test account and immediately requests its code.
+   *
+   * Not named `useTestAccount`: the `use` prefix makes ESLint treat a plain
+   * function as a hook and reject it for being called from a click handler.
+   */
+  function signInAsTestAccount(
     event: React.MouseEvent,
     testPhone: string,
     testRole: Role,
@@ -248,7 +273,9 @@ export default function LoginPage() {
                       key={account.phone}
                       type="button"
                       disabled={busy}
-                      onClick={(e) => useTestAccount(e, account.phone, account.role)}
+                      onClick={(e) =>
+                        signInAsTestAccount(e, account.phone, account.role)
+                      }
                       className="flex w-full items-center justify-between rounded-lg bg-white px-3 py-2.5 text-left text-sm ring-1 ring-ink-200 transition-colors hover:bg-brand-50 hover:ring-brand-300 disabled:opacity-50"
                     >
                       <span className="font-medium text-ink-800">{account.label}</span>
@@ -322,17 +349,39 @@ export default function LoginPage() {
                 {busy ? "Verifying…" : "Verify and continue"}
               </Button>
 
-              <button
-                type="button"
-                onClick={() => {
-                  setStep("phone");
-                  setCode("");
-                  setError(null);
-                }}
-                className="w-full text-sm font-medium text-brand-600 hover:text-brand-700"
-              >
-                Change number
-              </button>
+              {/* Resend, behind a cooldown. An SMS can take 30 seconds to
+                  arrive on a congested Indian network, and without a visible
+                  timer people tap resend repeatedly — burning the hourly send
+                  limit and locking themselves out of their own account. The
+                  countdown turns "is it broken?" into "wait 24 seconds". */}
+              <div className="flex items-center justify-between text-sm">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setStep("phone");
+                    setCode("");
+                    setError(null);
+                  }}
+                  className="font-medium text-brand-600 hover:text-brand-700"
+                >
+                  Change number
+                </button>
+
+                {resendIn > 0 ? (
+                  <span className="text-ink-500">
+                    Resend in {resendIn}s
+                  </span>
+                ) : (
+                  <button
+                    type="button"
+                    disabled={busy}
+                    onClick={(e) => void requestCode(e as unknown as React.FormEvent)}
+                    className="font-medium text-brand-600 hover:text-brand-700 disabled:opacity-50"
+                  >
+                    Resend code
+                  </button>
+                )}
+              </div>
             </form>
           )}
         </div>

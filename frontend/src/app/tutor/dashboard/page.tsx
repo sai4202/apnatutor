@@ -45,25 +45,37 @@ export default function TutorDashboard() {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [verifications, setVerifications] = useState<Verification[]>([]);
   const [level, setLevel] = useState<string>("PHONE_VERIFIED");
+  const [balance, setBalance] = useState(0);
+  const [leadCount, setLeadCount] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     try {
-      const [profileRes, verificationRes, levelRes] = await Promise.all([
-        authFetch("/tutor/profile"),
-        authFetch("/tutor/verification"),
-        authFetch("/tutor/verification/level"),
-      ]);
+      const [profileRes, verificationRes, levelRes, walletRes, leadsRes] =
+        await Promise.all([
+          authFetch("/tutor/profile"),
+          authFetch("/tutor/verification"),
+          authFetch("/tutor/verification/level"),
+          authFetch("/tutor/leads/wallet"),
+          authFetch("/tutor/leads?size=1"),
+        ]);
       if (profileRes.ok) setProfile(await profileRes.json());
       if (verificationRes.ok) setVerifications(await verificationRes.json());
       if (levelRes.ok) setLevel((await levelRes.text()).replaceAll('"', ""));
+      if (walletRes.ok) setBalance((await walletRes.json()).balance);
+      // size=1 because only the count is used here; the page itself is thrown away.
+      if (leadsRes.ok) setLeadCount((await leadsRes.json()).totalElements);
     } catch {
       setError("Could not reach the server.");
     }
   }, [authFetch]);
 
   useEffect(() => {
-    void load();
+    // See the note in student/profile.
+    async function run() {
+      await load();
+    }
+    void run();
   }, [load]);
 
   async function submitDocument(type: "ID" | "EDUCATION", file: File) {
@@ -199,20 +211,41 @@ export default function TutorDashboard() {
         </section>
 
         <section className="panel bg-white p-6 ring-1 ring-ink-200/70 sm:p-8">
-          <h2 className="text-lg font-bold">Student enquiries</h2>
-          {/* Not zeroes. A "0 enquiries" counter reads as "nobody wants you"
-              rather than "this is not built yet", and that difference matters to
-              someone deciding whether to bother finishing their profile. */}
-          <p className="mt-2 text-ink-600">
-            The lead feed opens in M3, once students can post requirements. Your
-            profile and verification are what get you ready for it.
-          </p>
+          <div className="flex flex-wrap items-start justify-between gap-4">
+            <div>
+              <h2 className="text-lg font-bold">Student enquiries</h2>
+              {/* Only ever shown once the profile is live. Before that a "0
+                  enquiries" line reads as "nobody wants you" rather than "you
+                  are not visible yet" — and the difference matters to someone
+                  deciding whether to bother finishing their profile. */}
+              <p className="mt-2 text-ink-600">
+                {!profile.published
+                  ? "Publish your profile and enquiries matching your subjects and areas will start appearing here."
+                  : leadCount === null
+                    ? "Loading…"
+                    : leadCount === 0
+                      ? "Nothing new right now. Adding more subjects or areas widens what reaches you."
+                      : `${leadCount} enquiry${leadCount === 1 ? "" : " enquiries"} matching what you teach.`}
+              </p>
+            </div>
+            <div className="rounded-xl bg-brand-50 px-5 py-3 text-center ring-1 ring-brand-200">
+              <p className="text-2xl font-bold text-brand-700">{balance}</p>
+              <p className="text-xs text-brand-900/70">credits</p>
+            </div>
+          </div>
+
+          {profile.published && (
+            <ButtonLink href="/tutor/leads" className="mt-5">
+              View enquiries
+              <Icon name="arrow" className="h-4 w-4" />
+            </ButtonLink>
+          )}
+
           <Link
             href="/for-tutors"
-            className="mt-4 inline-flex items-center gap-1.5 text-sm font-semibold text-brand-600 hover:text-brand-700"
+            className="mt-4 block text-sm font-semibold text-brand-600 hover:text-brand-700"
           >
-            How enquiries will work
-            <Icon name="arrow" className="h-4 w-4" />
+            How enquiries and credits work
           </Link>
         </section>
       </div>

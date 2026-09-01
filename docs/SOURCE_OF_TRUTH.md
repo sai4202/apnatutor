@@ -59,10 +59,35 @@ Cost in credits is a function of the requirement's monthly budget:
 - Price is **locked onto the requirement at creation time** (`requirements.unlock_cost_credits`). Later pricing changes never alter existing leads — tutors must never see a price move under them.
 
 ### 3.2 Unlock cap
-- **5 tutors maximum** per requirement.
-- The 6th unlock attempt is rejected with `LEAD_UNLOCK_CAP_REACHED`; no credits are debited.
+- **5 tutors maximum** per requirement — the default of the `lead.unlock_cap` setting, editable by an admin within bounds of 1–20.
+- Like the price, the cap is **locked onto the requirement at creation** (`requirements.unlock_cap`). Raising the setting must never reopen an enquiry whose owner was told to expect at most five calls.
+- An unlock attempt past the cap is rejected with `LEAD_UNLOCK_CAP_REACHED`; no credits are debited.
 - Once capped, the requirement disappears from all other tutors' feeds.
 - A refunded unlock **frees its slot** back up.
+
+### 3.2a Who is shown a lead
+
+A requirement appears in a tutor's feed only if **all** of these hold. `findLeadFeedFor` and `findTutorsToNotify` both encode this rule and must stay in step.
+
+- The tutor teaches the subject.
+- The requirement is `ONLINE`, has no location, or the tutor lists that locality or its city.
+- The tutor has not already unlocked it.
+- The requirement is `OPEN` and unexpired.
+- **The tutor's profile is published.** An unpublished tutor unlocking a lead would put a stranger on a parent's phone with no profile for the parent to check them against — which is what the verification ladder exists to prevent.
+
+### 3.2b Unlocking is replay-safe
+
+A repeated unlock returns the unlock the tutor already holds. It does not charge again and does not error.
+
+This is not politeness. The case it covers is a tutor on a patchy mobile connection whose request succeeded but whose response never arrived, and whose client then retried: answering that retry with `LEAD_ALREADY_UNLOCKED` would leave them charged and holding nothing, which is the worst outcome the money path can produce. It also makes the endpoint idempotent without an `Idempotency-Key` header — the same guarantee, enforced by the data rather than by a header a client can forget.
+
+The charge is still exactly once, guarded by a `SELECT … FOR UPDATE` on the requirement and a unique index on `(requirement_id, tutor_id)` underneath. `LEAD_ALREADY_UNLOCKED` remains a valid `ErrorCode` and is still returned when two of a tutor's own requests race.
+
+### 3.2c New leads are pushed, not waited for
+
+When a requirement is posted, matching tutors are notified (`NEW_MATCHING_LEAD`). A lead nobody sees for a day is usually a lead the parent has already solved elsewhere.
+
+The fan-out is capped at **4× the enquiry's own unlock cap**, ordered by approved verifications then rating then review count. Messaging every tutor who matches would mean most recipients arrive to find the lead taken, which teaches them the notifications are not worth opening.
 
 ### 3.3 Free credits
 - **10 credits**, granted once, when a tutor reaches verification level `ID_VERIFIED` (phone + email + ID all approved).

@@ -1,5 +1,6 @@
 import Link from "next/link";
-import { ButtonLink, Container, Icon } from "@/components/ui";
+import { AccountMenu } from "@/components/AccountMenu";
+import { Container, Icon } from "@/components/ui";
 
 /**
  * The ApnaTutor wordmark.
@@ -56,12 +57,7 @@ export function SiteHeader() {
           </nav>
 
           <div className="hidden items-center gap-2 md:flex">
-            <ButtonLink href="/login" variant="ghost" size="sm">
-              Sign in
-            </ButtonLink>
-            <ButtonLink href="/post-requirement" size="sm">
-              Post a requirement
-            </ButtonLink>
+            <AccountMenu />
           </div>
 
           <details className="relative md:hidden">
@@ -80,15 +76,7 @@ export function SiteHeader() {
                 </Link>
               ))}
               <div className="my-2 h-px bg-ink-200" />
-              <Link
-                href="/login"
-                className="block rounded-lg px-3 py-2.5 text-sm font-medium text-ink-700 hover:bg-brand-50"
-              >
-                Sign in
-              </Link>
-              <ButtonLink href="/post-requirement" size="sm" className="mt-1 w-full">
-                Post a requirement
-              </ButtonLink>
+              <AccountMenu layout="stacked" />
             </div>
           </details>
         </div>

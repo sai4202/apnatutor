@@ -96,7 +96,11 @@ export default function OnboardingPage() {
   }, [authFetch]);
 
   useEffect(() => {
-    void load();
+    // See the note in student/profile.
+    async function run() {
+      await load();
+    }
+    void run();
   }, [load]);
 
   /** One save path for every step, so the error and success handling cannot diverge. */
@@ -174,9 +178,6 @@ export default function OnboardingPage() {
     );
   }
 
-  const leafSubjects = subjectTree.flatMap((category) =>
-    category.children.map((child) => ({ ...child, category: category.name })),
-  );
   const selectedSubjectIds = new Set(profile.subjects.map((s) => s.subjectId));
   const selectedLocationIds = new Set(profile.locations.map((l) => l.locationId));
 
@@ -586,6 +587,12 @@ export default function OnboardingPage() {
               </p>
 
               {profile.photoUrl && (
+                /* A plain <img>, not next/image. The source is the backend's own
+                   file endpoint on a different origin, so the optimizer would
+                   need it added to remotePatterns and would then proxy every
+                   upload through the Next server. This is a 128px preview the
+                   tutor just uploaded and is the only person who sees. */
+                // eslint-disable-next-line @next/next/no-img-element
                 <img
                   src={`${API_BASE_URL}/public/files/${profile.photoUrl}`}
                   alt="Your profile photo"

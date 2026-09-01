@@ -11,11 +11,11 @@
 | M0 — Foundation | 12 | 12 ☑ |
 | M1 — Accounts, profiles & trust | 12 | 8 ☑, 2 ▶ — **backend complete; frontend M1-11/M1-12 remain** |
 | M2 — Discovery & SEO | 8 | 6 ☑, 2 ▶ |
-| M3 — Requirements & the lead loop | 11 | 9 ☑ — **backend complete**, frontend M3-10/M3-11 remain |
+| M3 — Requirements & the lead loop | 11 | 11 ☑ — **complete, front to back** |
 | M4 — Credits & payments | 8 | 0 |
 | M5 — Reviews, admin & trust | 10 | 0 |
-| M6 — Polish & launch | 10 | 0 |
-| **V1 total** | **71** (260 subtasks) | **12** |
+| M6 — Polish & launch | 10 | **deferred at your request** |
+| **V1 total** | **71** (260 subtasks) | **37** |
 
 ---
 
@@ -210,81 +210,91 @@ Complete 2026-08-31, commit `02208c3`.
 
 **Goal:** the core marketplace transaction works end to end. This is the milestone the product lives or dies on.
 
-### ☐ `M3-01` Requirements schema
-- ☐ `M3-01.1` `V6__requirements.sql` — `requirements`, `lead_unlocks`
-- ☐ `M3-01.2` `lead_unlocks` carries `engagement_type` (SoT Invariant 2)
-- ☐ `M3-01.3` **Unique constraint on `(requirement_id, tutor_id)`** — a tutor must never be charged twice for one lead
-- ☐ `M3-01.4` Entities + repositories
+### ☑ `M3-01` Requirements schema
+- ☑ `M3-01.1` `V9__requirements.sql` — `requirements`, `lead_unlocks` *(V9, not V6 — verification took V7 and search indexes V8)*
+- ☑ `M3-01.2` `lead_unlocks` carries `engagement_type` (SoT Invariant 2)
+- ☑ `M3-01.3` **Unique constraint on `(requirement_id, tutor_id)`** — a tutor must never be charged twice for one lead
+- ☑ `M3-01.4` Entities + repositories
 
-### ☐ `M3-02` Lead pricing
-- ☐ `M3-02.1` `LeadPricingService` implementing the SoT §3.1 budget bands
-- ☐ `M3-02.2` Online-only ×0.8, rounded up
-- ☐ `M3-02.3` **Price locked onto the requirement at creation** — repricing must never move a lead's cost under a tutor
-- ☐ `M3-02.4` Table-driven tests across every band boundary
+### ☑ `M3-02` Lead pricing
+- ☑ `M3-02.1` `LeadPricingService` implementing the SoT §3.1 budget bands — now DB-backed and admin-editable
+- ☑ `M3-02.2` Online-only multiplier, rounded up — the multiplier is a setting, not a constant
+- ☑ `M3-02.3` **Price locked onto the requirement at creation** — repricing must never move a lead's cost under a tutor
+- ☑ `M3-02.4` Table-driven tests across every band boundary — 22 cases, no Spring context
 
-### ☐ `M3-03` Requirement endpoints
-- ☐ `M3-03.1` Post a requirement (student only)
-- ☐ `M3-03.2` List/edit/close own requirements
-- ☐ `M3-03.3` Mark HIRED / CLOSED
-- ☐ `M3-03.4` View tutors who unlocked, with contacts revealed
-- ☐ `M3-03.5` Validation against catalog IDs
+### ☑ `M3-03` Requirement endpoints
+- ☑ `M3-03.1` Post a requirement (student only)
+- ☑ `M3-03.2` List/edit/close own requirements
+- ☑ `M3-03.3` Mark HIRED / CLOSED
+- ☑ `M3-03.4` View tutors who unlocked, with contacts revealed
+- ☑ `M3-03.5` Validation against catalog IDs
 
-### ☐ `M3-04` Requirement lifecycle
-- ☐ `M3-04.1` 30-day expiry scheduled job
-- ☐ `M3-04.2` Status transitions: OPEN → CAPPED / HIRED / CLOSED / EXPIRED
-- ☐ `M3-04.3` Guard illegal transitions
+### ☑ `M3-04` Requirement lifecycle
+- ☑ `M3-04.1` Expiry scheduled job — `RequirementExpiryJob`, hourly, one bulk UPDATE; the window is a setting
+- ☑ `M3-04.2` Status transitions: OPEN → CAPPED / HIRED / CLOSED / EXPIRED
+- ☑ `M3-04.3` Guard illegal transitions
 
-### ☐ `M3-05` Credit ledger & wallet *(moved from M4 — see corrections above)*
-- ☐ `M3-05.1` `V7__billing.sql` — `credit_wallets`, `credit_transactions`
-- ☐ `M3-05.2` **Append-only ledger** (SoT Invariant 1) — DB-level guard against UPDATE/DELETE
-- ☐ `M3-05.3` Balance derivation from the ledger, honouring expiry
-- ☐ `M3-05.4` `credit_wallets.balance` as a cache, written in the same transaction
-- ☐ `M3-05.5` Reconciliation check: replayed ledger must equal cached balance
-- ☐ `M3-05.6` Admin credit grant — lets M3 be tested before any payment code exists
-- ☐ `M3-05.7` `GET /tutor/wallet` + transaction history
+### ☑ `M3-05` Credit ledger & wallet *(moved from M4 — see corrections above)*
+- ☑ `M3-05.1` `V10__billing.sql` — `credit_wallets`, `credit_transactions`
+- ☑ `M3-05.2` **Append-only ledger** (SoT Invariant 1) — DB trigger rejecting UPDATE and DELETE
+- ☑ `M3-05.3` Balance derivation from the ledger, honouring expiry
+- ☑ `M3-05.4` `credit_wallets.balance` as a cache, written in the same transaction
+- ☑ `M3-05.5` Reconciliation check: replayed ledger must equal cached balance
+- ☑ `M3-05.6` Admin credit grant — lets M3 be tested before any payment code exists
+- ☑ `M3-05.7` `GET /tutor/leads/wallet` + transaction history
+- ☐ `M3-05.8` Scheduled credit expiry — **deferred to M4** with the rest of credit lifecycle; nothing can expire until credits can be bought
 
-### ☐ `M3-06` Lead feed
-- ☐ `M3-06.1` Match on tutor's subjects × serviceable locations
-- ☐ `M3-06.2` Masked projection — no name, phone or exact address
-- ☐ `M3-06.3` Exclude already-unlocked, capped, closed and expired requirements
-- ☐ `M3-06.4` Show unlock cost and remaining slots
-- ☐ `M3-06.5` Sorting and pagination
+### ☑ `M3-06` Lead feed
+- ☑ `M3-06.1` Match on tutor's subjects × serviceable locations
+- ☑ `M3-06.2` Masked projection — no name, phone or exact address, enforced structurally by the DTO
+- ☑ `M3-06.3` Exclude already-unlocked, capped, closed and expired requirements
+- ☑ `M3-06.4` Show unlock cost and remaining slots
+- ☑ `M3-06.5` Sorting and pagination — newest first, page size capped at 50
+- ☑ `M3-06.6` **Published profiles only** — added after the fact; see the note below
 
-### ☐ `M3-07` Unlock endpoint — **the critical path**
-- ☐ `M3-07.1` `POST /leads/{id}/unlock` with a required `Idempotency-Key`
-- ☐ `M3-07.2` Single transaction: check cap → check balance → ledger debit → record unlock → reveal
-- ☐ `M3-07.3` Insufficient balance → `INSUFFICIENT_CREDITS`, nothing written
-- ☐ `M3-07.4` Cap reached → `LEAD_UNLOCK_CAP_REACHED`, **no credits debited**
-- ☐ `M3-07.5` Optional intro message to the student
-- ☐ `M3-07.6` Response reveals contact details
-- ☐ `M3-07.7` Replaying an idempotency key returns the original result, never a second charge
+### ☑ `M3-07` Unlock endpoint — **the critical path**
+- ☑ `M3-07.1` `POST /tutor/leads/{id}/unlock`, replay-safe — **no `Idempotency-Key` header**; see the note below
+- ☑ `M3-07.2` Single transaction: check cap → check balance → ledger debit → record unlock → reveal
+- ☑ `M3-07.3` Insufficient balance → `INSUFFICIENT_CREDITS`, nothing written
+- ☑ `M3-07.4` Cap reached → `LEAD_UNLOCK_CAP_REACHED`, **no credits debited**
+- ☑ `M3-07.5` Optional intro message to the student
+- ☑ `M3-07.6` Response reveals contact details
+- ☑ `M3-07.7` Replaying an unlock returns the original result, never a second charge
 
-### ☐ `M3-08` Cap enforcement & concurrency
-- ☐ `M3-08.1` Enforce the cap of 5 (SoT §3.2)
-- ☐ `M3-08.2` Transition to `CAPPED`, remove from all other feeds
-- ☐ `M3-08.3` **Concurrency test: N tutors unlock the last slot in parallel — exactly one wins, and no loser is charged**
-- ☐ `M3-08.4` Pessimistic lock or a unique-constraint strategy, chosen deliberately and documented
+### ☑ `M3-08` Cap enforcement & concurrency
+- ☑ `M3-08.1` Enforce the cap (SoT §3.2) — the number is a setting, locked onto each requirement at posting
+- ☑ `M3-08.2` Transition to `CAPPED`, remove from all other feeds
+- ☑ `M3-08.3` **Concurrency test: 10 tutors race for 5 slots — 5 win, no loser is charged, the ledger reconciles**
+- ☑ `M3-08.4` Pessimistic `SELECT … FOR UPDATE`, with a unique index underneath as the real guarantee
 
-### ☐ `M3-09` Notifications
-- ☐ `M3-09.1` `MailSender` interface + console dev stub
-- ☐ `M3-09.2` `notifications` table + service
-- ☐ `M3-09.3` Tutor: new matching lead
-- ☐ `M3-09.4` Student: a tutor unlocked your requirement
-- ☐ `M3-09.5` Tutor: low credit balance
-- ☐ `M3-09.6` Send outside the unlock transaction — a mail failure must never roll back a paid unlock
+### ☑ `M3-09` Notifications
+- ☑ `M3-09.1` `MailSender` + `SmsSender` interfaces with console dev stubs
+- ☑ `M3-09.2` `V11__notifications.sql` + `NotificationService`
+- ☑ `M3-09.3` Tutor: new matching lead — fan-out capped at 4× the enquiry's unlock cap
+- ☑ `M3-09.4` Student: a tutor unlocked your requirement
+- ☑ `M3-09.5` Tutor: low credit balance — threshold is a setting
+- ☑ `M3-09.6` Rows written in the caller's transaction, **delivered after commit** via `@TransactionalEventListener`
 
-### ☐ `M3-10` Frontend — student side
-- ☐ `M3-10.1` Post-requirement form (mobile-first; this is the top-of-funnel conversion point)
-- ☐ `M3-10.2` Requirement dashboard
-- ☐ `M3-10.3` Responding-tutors list with revealed contacts
-- ☐ `M3-10.4` Mark hired / close
+### ☑ `M3-10` Frontend — student side
+- ☑ `M3-10.1` Post-requirement form (mobile-first; fillable before sign-in, with a live price quote)
+- ☑ `M3-10.2` Requirement dashboard
+- ☑ `M3-10.3` Responding-tutors list with revealed contacts
+- ☑ `M3-10.4` Mark hired / close
 
-### ☐ `M3-11` Frontend — tutor side
-- ☐ `M3-11.1` Lead feed with masked previews
-- ☐ `M3-11.2` Unlock confirmation showing cost and resulting balance
-- ☐ `M3-11.3` Post-unlock contact reveal
-- ☐ `M3-11.4` My-leads list
-- ☐ `M3-11.5` Wallet balance visible throughout
+### ☑ `M3-11` Frontend — tutor side
+- ☑ `M3-11.1` Lead feed with masked previews
+- ☑ `M3-11.2` Unlock confirmation showing cost and resulting balance
+- ☑ `M3-11.3` Post-unlock contact reveal
+- ☑ `M3-11.4` My-leads list
+- ☑ `M3-11.5` Wallet balance visible throughout, and in the header for signed-in users
+
+### Two behaviour changes made while closing M3
+
+Both were found by walking the money path rather than by a failing test, and both are recorded in SoT §3.
+
+**`M3-06.6` — only published tutors see leads.** The feed matched on subjects and locations alone, so a tutor who had never published could unlock a lead. That puts a stranger on a parent's phone with no profile for the parent to check them against, which is precisely what the verification ladder exists to prevent. `findLeadFeedFor` and `findTutorsToNotify` now both require `is_published`, and they must stay in step — notifying a tutor about a lead their feed will not show them sends them to an empty screen.
+
+**`M3-07.1` — replay safety without an `Idempotency-Key`.** The task asked for the header. A repeated unlock now returns the unlock the tutor already holds, which achieves the same guarantee structurally and covers the case the header would have missed anyway: a tutor on a patchy mobile connection whose request succeeded but whose response never arrived. Answering that retry with `LEAD_ALREADY_UNLOCKED` left them charged and holding nothing — the worst outcome the money path can produce. The charge is still exactly once, guarded by the row lock and the unique index. `LEAD_ALREADY_UNLOCKED` remains in `ErrorCode` and is still returned when two of a tutor's own requests race.
 
 ---
 
