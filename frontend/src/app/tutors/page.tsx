@@ -62,8 +62,8 @@ export default async function TutorsPage({
 
   return (
     <>
-      <section className="border-b border-ink-200 bg-brand-wash py-10">
-        <Container>
+      <Container className="pt-5 sm:pt-6">
+        <section className="panel bg-brand-wash px-6 py-10 sm:px-10">
           <h1 className="text-3xl font-bold sm:text-4xl">
             {describedSearch ? `Tutors for ${describedSearch}` : "Find a tutor"}
           </h1>
@@ -74,10 +74,10 @@ export default async function TutorsPage({
               defaultCity={params.city ?? ""}
             />
           </div>
-        </Container>
-      </section>
+        </section>
+      </Container>
 
-      <Container className="py-10">
+      <Container className="py-5 sm:py-6">
         <div className="grid gap-8 lg:grid-cols-[16rem_1fr]">
           {/* Filters. A details element on mobile so they collapse out of the
               way, always open from lg up where there is room. */}

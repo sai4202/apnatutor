@@ -70,7 +70,7 @@ function FooterColumn({
 
 export function SiteFooter() {
   return (
-    <footer className="mt-24 border-t border-ink-200 bg-ink-50">
+    <footer className="mt-6 border-t border-ink-200 bg-white">
       <Container className="py-14">
         <div className="grid gap-10 sm:grid-cols-2 lg:grid-cols-5">
           <div className="lg:col-span-1">

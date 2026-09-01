@@ -94,8 +94,8 @@ export default async function TutorProfilePage({
         </Container>
       </div>
 
-      <section className="border-b border-ink-200 bg-brand-wash py-10 sm:py-14">
-        <Container>
+      <Container className="pt-5 sm:pt-6">
+        <section className="panel bg-brand-wash px-6 py-10 sm:px-10 sm:py-12">
           <Link
             href="/tutors"
             className="inline-flex items-center gap-1.5 text-sm font-medium text-ink-600 hover:text-brand-700"
@@ -164,10 +164,10 @@ export default async function TutorProfilePage({
               )}
             </div>
           </div>
-        </Container>
-      </section>
+        </section>
+      </Container>
 
-      <Container className="py-10 sm:py-14">
+      <Container className="py-5 sm:py-6">
         <div className="grid gap-10 lg:grid-cols-[1fr_20rem]">
           <div className="space-y-10">
             <section>

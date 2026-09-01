@@ -35,7 +35,9 @@ export default function RootLayout({
 }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="en-IN">
-      <body className="flex min-h-screen flex-col bg-white text-ink-800 antialiased">
+      {/* No bg utility here — the ground colour is set on body in globals.css,
+          so the panels laid on top read as raised surfaces. */}
+      <body className="flex min-h-screen flex-col text-ink-800 antialiased">
         {/* First focusable element on the page. Keyboard and screen-reader users
             should not have to tab through the whole nav on every page. */}
         <a

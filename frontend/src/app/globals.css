@@ -91,39 +91,55 @@
 }
 
 /* --- Base ---------------------------------------------------------------- */
-html {
-  -webkit-text-size-adjust: 100%;
-  scroll-behavior: smooth;
-}
+/*
+ * These MUST live inside @layer base.
+ *
+ * Unlayered CSS beats layered CSS in the cascade regardless of specificity, and
+ * Tailwind puts its utilities in @layer utilities. When this block was
+ * unlayered, the `h1,h2,h3,h4 { color }` rule below silently overrode every
+ * `text-white` heading in the application — which made "Are you a tutor?"
+ * invisible on its dark panel and rendered the heading on the blue panel in
+ * near-black. Nothing about that failure points at the cascade, which is what
+ * made it worth a comment this long.
+ */
+@layer base {
+  html {
+    -webkit-text-size-adjust: 100%;
+    scroll-behavior: smooth;
+  }
 
-body {
-  background-color: #ffffff;
-  color: var(--color-ink-800);
-  font-family: var(--font-sans);
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-}
+  body {
+    /* A faint neutral ground rather than pure white, so the white panels laid
+       on top of it read as raised surfaces instead of dissolving into the page. */
+    background-color: var(--color-ink-50);
+    color: var(--color-ink-800);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
 
-/* Headings carry the darkest ink and tight tracking; body text stays a step
-   lighter. The contrast between the two is what creates hierarchy without
-   needing more type sizes. */
-h1, h2, h3, h4 {
-  color: var(--color-ink-900);
-  letter-spacing: -0.02em;
-  text-wrap: balance;
-}
+  /* Headings carry the darkest ink and tight tracking; body text stays a step
+     lighter. The contrast between the two creates hierarchy without needing
+     more type sizes. Overridable by a `text-*` utility, now that this is
+     layered. */
+  h1, h2, h3, h4 {
+    color: var(--color-ink-900);
+    letter-spacing: -0.02em;
+    text-wrap: balance;
+  }
 
-p {
-  text-wrap: pretty;
-}
+  p {
+    text-wrap: pretty;
+  }
 
-/* A single visible focus treatment everywhere. Browser defaults vary and are
-   often invisible against a blue button; keyboard users need one consistent,
-   obvious indicator. */
-:focus-visible {
-  outline: 2px solid var(--color-brand-600);
-  outline-offset: 2px;
-  border-radius: 2px;
+  /* A single visible focus treatment everywhere. Browser defaults vary and are
+     often invisible against a blue button; keyboard users need one consistent,
+     obvious indicator. */
+  :focus-visible {
+    outline: 2px solid var(--color-brand-600);
+    outline-offset: 2px;
+    border-radius: 2px;
+  }
 }
 
 /* --- Motion --------------------------------------------------------------- */
@@ -238,6 +254,31 @@ p {
     rgb(239 246 255 / 0.9),
     rgb(248 250 252 / 0.9)
   );
+}
+
+/* --- Section panels -------------------------------------------------------
+ *
+ * Every major section is a rounded panel on a faint neutral ground, rather than
+ * a full-bleed band separated by hairlines.
+ *
+ * Two reasons. It gives each section an actual edge, so where one idea ends and
+ * the next begins is unambiguous — full-bleed bands rely on the reader
+ * inferring the break from a colour change alone. And because every panel is
+ * inside the same Container, their left and right edges line up down the whole
+ * page, which is most of what makes a layout read as deliberate.
+ *
+ * The radius is large (24px) and consistent. Mixing radii is one of the fastest
+ * ways to make a page look assembled from parts.
+ */
+.panel {
+  border-radius: 1.5rem;
+  overflow: hidden;
+}
+
+@media (min-width: 640px) {
+  .panel {
+    border-radius: 2rem;
+  }
 }
 
 /* Subtle grid, for the hero only. Low-contrast on purpose: it should register
