@@ -2,8 +2,8 @@
 
 > Update this **in the same session as the code change**, never later. If a session ends without a changelog entry, the next session starts blind.
 
-**Current milestone:** M5 — Reviews, admin & trust
-**Overall:** ████████ M0–M4 complete, **M5 half done** · **205 tests** · the full money path works, and **ratings are now real**: a student who was actually put in touch with a tutor can review them, a moderator publishes it, and search finally ranks on something
+**Current milestone:** M5 complete. **M6 — Polish & launch** is next, and is deferred at your request.
+**Overall:** ███████████ **M0–M5 complete** · **250 tests** · the marketplace works end to end, it can be run and moderated from a console, everything done there is on the record, the front door is bounded, and people can take their data or leave with it
 
 ---
 
@@ -11,11 +11,11 @@
 
 Read this first when resuming. Keep it to exactly three, always current.
 
-1. `M5-05` / `M5-06` — the admin console. Four of the seven backend capabilities now exist (verification, review moderation, credits/refunds, packages/pricing); what remains is user suspend/reinstate, requirement moderation, funnel metrics — and then the screens. `AccountMenu.tsx:24` already links `ADMIN → /admin`, which 404s today, and `RequireRole` already handles the role, so the guard is ready.
-2. `M5-07` / `M5-08` — rate limiting (repays debt **T10**: OTP is capped per phone only, so one attacker can walk many numbers) and the audit log. `V17__audit.sql` — **not `V11`**, which is `notifications`.
-3. `M5-09` / `M5-10` — abuse reporting, then DPDP export and delete. Note `M5-10.3`: deletion must anonymise ledger rows, never remove them.
+1. **Decide whether to start M6.** It is deferred at your request and is the whole launch surface: responsive pass, empty and error states, accessibility, seed data, end-to-end tests, performance, deployment, observability, legal pages, production providers. Nothing in it is blocked.
+2. If M6 starts, **`M6-07` (deployment) is where the debts land together** — `T13` and `T20` are the same single-instance assumption (the credit expiry job and the rate limit buckets), and `T21` is the server-side-rendering IP problem that only becomes fixable once a proxy exists. One piece of work, three debts.
+3. **`T11` must be deleted, not left behind**: `lib/exampleTutors.ts` is three fabricated tutor profiles powering the hero and `/tutors/[slug]`. Every surface is labelled as an example today. A forgotten sample profile that outlives launch is a fake listing on a live marketplace.
 
-M6 is deferred at your request. Full breakdown in [TASKS.md](./TASKS.md); open decisions and debt in [PENDING.md](./PENDING.md).
+Full breakdown in [TASKS.md](./TASKS.md); open decisions and debt in [PENDING.md](./PENDING.md).
 
 ---
 
@@ -28,12 +28,111 @@ M6 is deferred at your request. Full breakdown in [TASKS.md](./TASKS.md); open d
 | M2 — Catalog & discovery | ✅ Done (2 subtasks deliberately deferred) |
 | M3 — Requirements & lead loop | ✅ Done (2026-09-01) |
 | M4 — Credits & payments | ✅ Done (2026-09-01) |
-| M5 — Reviews, admin & trust | 🟡 In progress — `M5-01`…`M5-04` and `M5-11` done |
+| M5 — Reviews, admin & trust | ✅ Done (2026-09-04) |
 | M6 — Polish & launch | ⏸️ Deferred at your request |
 
 ---
 
 ## Changelog
+
+### 2026-09-04 — M5-09 and M5-10: reporting, and the right to leave. **M5 is closed.**
+
+**250 tests pass**, up from 234. Migrations V19 and V20.
+
+**A report is a signal, not an instruction** (ADR #18). Upholding one records that a moderator agreed and changes nothing about the account it names — suspending, removing or unpublishing is done from the screen that owns that action, with its own rules and its own audit entry. The alternative makes the report button a weapon: a handful of coordinated reports removes a competitor, and it skips the one step where a person looks. `upholdingDoesNotActOnTheSubject` is the test.
+
+**One open report per person per subject**, as a partial unique index. The number a moderator reads is how many *different* people reported the same thing, so one person filing fifty times must not look like fifty people. Partial, so the same person may report again once the first was decided — a second incident is real information, not a duplicate.
+
+**`SYSTEM` reports are counted separately from people.** "Four people reported this tutor" and "four reports, three of them ours" are different facts, and `countDistinctReportersFor` ignores the platform's own.
+
+**The dispute-rate signal finally has somewhere to go.** `RefundService.warnIfDisputeRateHigh` has warned into a log since M4 with a comment promising it would become an alert; that comment was corrected during M5-08 to point here, and now it raises a `SYSTEM` report instead. It is idempotent while one is open — the signal fires on every new dispute, and a queue with forty identical entries for one tutor is a queue nobody reads.
+
+**Deletion anonymises and never removes** (M5-10.3, ADR #19). Two append-only tables reference `users.id`: the credit ledger by Invariant 1 and the audit log by M5-08.4. Removing the row would either cascade rows out of an immutable ledger or leave dangling references in one.
+
+**The anonymised phone was the interesting part.** The column is `NOT NULL`, uniquely indexed and CHECKed against E.164 — three constraints that between them rule out null, a constant and free text. The value is `+99` plus the zero-padded user id: unique by construction, valid E.164 by shape, and `+99` is not an assigned country code so it can never collide with a real number. The alternative was to make the column nullable with a partial unique index, which would have meant relaxing a constraint that has stopped one number becoming two accounts since V2 — a live guarantee traded away for a rare case.
+
+**Identity documents are the one thing genuinely deleted.** Aadhaar and PAN scans; nothing references them and no ledger depends on them. A storage failure does not abort the deletion — a user asking to be forgotten being told "no" because one file call failed is the worse outcome — so the reference is cleared regardless, leaving an orphaned file, which is a cleanup problem rather than a privacy one.
+
+**The deletion copy is the feature.** Deleting forfeits a tutor's unspent credits, keeps the credit ledger, and leaves reviews they wrote published. Every one of those is a nasty surprise discovered afterwards, so all three are on the screen above the button. A dialog that asks only "are you sure?" is not consent to any of them.
+
+**The export is offered first, and says what it leaves out.** It includes the credit ledger, which is the section a tutor actually wants. It excludes other people's contact details even where the tutor paid to see them — that is their data, not the tutor's, and an export must not become a second way to buy a contact list. `exportDoesNotLeakOtherPeople` asserts it.
+
+**"Your data" is in the footer**, not behind the account menu. A right to a copy and a right to erasure are worth nothing if they are hard to find, and the footer is the one thing on every page.
+
+**M5 is complete.** M0 through M5 done: accounts and trust, discovery and SEO, the lead loop, credits and payments, reviews, the admin console, the audit log, rate limiting, reporting and data rights.
+
+### 2026-09-04 — M5-07: rate limiting, and the two places a per-IP limit is wrong
+
+**234 tests pass**, up from 224. No migration.
+
+**Token buckets, not fixed windows.** A fixed window lets a caller spend a full window's permits at 11:59:59 and another full window's at 12:00:00 — twice the intended rate, at the moment somebody looking for a gap would find it. A bucket refills continuously, so the burst it permits is exactly its capacity. `refillIsCappedAtCapacity` is the test: waiting longer never buys more than capacity.
+
+**The filter runs ahead of Spring Security**, at order `-101`. A limiter behind security never sees an anonymous request to a protected route, because security rejects it first — which was debt **T19** exactly: anonymous probing of `/admin` produced a 401 and no record anywhere. In front, the flood is turned away before authentication, which is also the cheapest place to turn it away. It is registered through a `FilterRegistrationBean` rather than `@Component` plus `@Order`, because Boot auto-registers filter beans at `LOWEST_PRECEDENCE` and ignores `@Order` while doing it — a filter meant to run first would have run last, silently, still working for authenticated traffic and quietly missing the requests it was added for.
+
+**The cost of that position is that everything in the filter is keyed on IP.** Keying on a user id there would mean reading it from a token nothing has verified yet, and an unverified `sub` claim is attacker-chosen — a forged one lets an attacker spend a victim's allowance rather than their own. Per-user limits therefore live in the service layer, where the identity has been proven.
+
+**Two places a per-IP limit is actively wrong, and both are handled.**
+
+- **Carrier-grade NAT.** Indian mobile networks share addresses heavily, so one address can be a neighbourhood. Every limit here is sized for "one address behaving badly", not "one person behaving normally"; a limit tuned to a single human would lock out a city block. What protects an individual number is still the per-phone OTP cap from M1-03.
+- **Server-side rendering.** The Next.js frontend renders public pages on the server, so every SEO page view reaches `/api/v1/public/**` from the frontend server's one address rather than the visitor's. A sensible-looking per-IP limit there would have throttled the entire site the first time traffic arrived. The public allowance is 3,000/min for that reason, and the real fix is forwarding the visitor address. Debt **T21**.
+
+**The unlock limit sits after the replay check, and that ordering is the whole point.** `LeadUnlockService.unlock` deliberately returns the existing unlock when a tutor already owns it, because the failure it prevents is a tutor on a patchy connection whose response was lost retrying and being charged twice. Rate-limiting before that check would refuse exactly those retries — turning a flaky network into a lost credit, which is the worst outcome the money path can produce. Only a genuinely new unlock counts against the allowance, and `replayedUnlocksDoNotCountAgainstTheAllowance` asserts it.
+
+**The bucket map cannot grow without bound.** Keys come from the network, so an unbounded map keyed on them is itself the denial of service the class exists to prevent. Buckets are swept past 50,000, and a **full bucket is dropped** — a caller holding all their permits is indistinguishable from one never seen, so eviction is free rather than a decision about whom to forget. If a sweep frees nothing, that is a distributed flood and it says so at WARN.
+
+**Rate limiting is skipped entirely in dev mode**, for the same reason the OTP cap exempts seeded accounts: they exist to be signed into repeatedly. `DevModeGuard` already refuses to start with dev mode on alongside a real SMS provider or a `prod` profile, so this cannot be why a production deployment is unprotected.
+
+**The suite runs with the limiter on but effectively unlimited.** Every test drives MockMvc from one loopback address, and a realistic limit would have the ~230 requests of a full run throttle each other — failures with nothing to do with what the tests assert. The filter still runs, so a change that broke it outright would still show up; `RateLimitIntegrationTest` sets its own low limits and gets its own context, and gives each test a distinct `X-Forwarded-For` so the two auth tests cannot spend each other's permits.
+
+Also shipped: `RATE_LIMITED` handled by code on the login screen and the lead feed. The two auth limits are worded differently on purpose — "too many codes for this number" and "too many attempts from your connection" are different facts, and on a shared mobile network the second is usually not the user's doing. The unlock message says "you have not been charged" explicitly, because a tutor one tap from their credit balance will assume the worst.
+
+### 2026-09-04 — M5-08: the audit log, and one honest gap
+
+**224 tests pass**, up from 217. Migration V18.
+
+**The rule is the route, not the call site.** `AuditInterceptor` writes exactly one entry for every mutating request under `/admin`, so an endpoint added next year is audited because of where it lives rather than because its author remembered. What an interceptor cannot know is what changed, so services describe themselves through `AuditContext` on the way past and the two are combined at `afterCompletion`. An action nobody described is still recorded, as its route and its outcome. Same argument as ADR #14: a thing every future code path must remember to do is a thing that will eventually not be done, and here the failure is silent — an action nobody logged looks exactly like an action nobody took.
+
+**The write runs in its own transaction**, `REQUIRES_NEW`, in a separate bean. A refused or failed action has rolled its own transaction back by then, and the record of a failed attempt is the entry most worth keeping; joining the caller's transaction would roll the evidence back with the thing it was evidence of. Third time this trap has appeared on this project, after `WebhookEventRecorder`. The write also never throws — a failed audit write must not turn a completed suspension into a 500, because the admin would simply do it again.
+
+**Immutable at the database, not by convention.** `UPDATE` and `DELETE` on `audit_log` raise, exactly as `credit_transactions` does. "We only ever insert" is a claim about code; the first thing anyone covering their tracks reaches for is an `UPDATE`. There is deliberately no retention job — when one is needed it should be a documented policy with its own migration, not a `DELETE` somebody adds quietly.
+
+**An honest gap, asserted rather than papered over.** The first version of this claimed in three places — javadoc, migration comment and a test — that an unauthenticated attempt on an admin route is recorded with a null actor. It is not. `anyRequest().authenticated()` rejects it in the security filter chain, before any interceptor runs. The test failed, which is what a test is for; the comments would have gone on being wrong indefinitely. All three now say what actually happens, and there is a test named `anonymousRequestsAreNotRecorded` that asserts the absence so nobody re-adds the claim. The case that does matter is covered: an authenticated non-admin probing `/admin` is recorded, because `@PreAuthorize` is evaluated during dispatch. Anonymous probing belongs to the access log and to `M5-07`. Debt **T19**.
+
+**Two kinds of read are audited; the rest are not.** `/admin/files/**`, the only route to an ID or education document, and `/admin/requirements/**`, the only projection of an enquiry carrying the student's own phone number — that one is debt **T18**, and this is what closes it. Reading those *is* the sensitive act. Every other admin `GET` is left alone: working a queue means loading it repeatedly, and an entry per poll buries the entries that matter, which is a way of losing an audit log without deleting anything.
+
+**`warnIfDisputeRateHigh` was not moved here, and the comment saying it would be has been corrected.** It fires when a tutor's dispute rate looks like abuse — the platform noticing something about a tutor, not an admin doing something. Putting it in `audit_log` would blur a table whose whole value is that every row has a person behind it. It belongs in the abuse triage queue at `M5-09.2`, and the javadoc now says so.
+
+**The console reports what a suspension does not do.** Suspending an account now says, on the screen, that search and the profile page close immediately but the user's own signed-in session can last up to fifteen more minutes. That is debt **T15** — stateless tokens, ADR-adjacent, not worth a revocation list yet — and an admin who is not told will report it as a bug.
+
+Also shipped: `GET /admin/audit` with filters on actor, target, action and outcome, and the `/admin/audit` screen, where before/after sits behind a disclosure because the log is scanned far more often than it is read. Reading that screen is itself audited.
+
+### 2026-09-04 — M5-05 and M5-06: the admin console, and a suspension that suspends
+
+**217 tests pass**, up from 205. Migration V17.
+
+**The finding that shaped this chunk: `SUSPENDED` was doing almost nothing.** `users.status` has carried it since V2, and `User.canAuthenticate` reads it, so a suspended account cannot log in. Nothing else looked at it. `TutorSearchRepository.buildFilter` narrowed on `tp.is_published = TRUE` alone, and `getPublicProfile` filtered on the same flag — so a tutor suspended for abusing a parent stayed in every search result and kept their profile page, and tutors kept paying to reach a student we had judged fraudulent. Building the suspend button first and discovering this afterwards would have shipped a feature whose only real effect was on a database column.
+
+**Suspension is enforced by the read queries, not by a flag** (ADR #14). The obvious fix — unpublish the profile on suspension, republish on reinstatement — is cheaper per read and wrong in the way that matters: it is state, and state has to be set correctly by every path that ever suspends anyone, forever. `findPublishedActiveById` and one extra `EXISTS` in the search filter cannot be forgotten by a future code path. The cost is a primary-key lookup per candidate row on the hottest query in the application.
+
+**Suspending a student takes their live enquiries down, and that refunds tutors.** Otherwise we would keep selling introductions to an account we have just called fraudulent, and every one of those charges becomes a dispute we would uphold anyway — the same money, paid out one support conversation at a time, plus the tutor's opinion of us. `HIRED` and `EXPIRED` enquiries are untouched: those introductions happened. A suspended tutor's unlocks are likewise left alone, and the asymmetry is the point — they paid for introductions that were real.
+
+**A takedown costs money, deliberately.** `RequirementModerationService.remove` refunds every active unlock in the same transaction as the status change, with the requirement row locked so an unlock cannot land between the sweep and the change. It writes **no `refund_requests` row** (ADR #15). A dispute is a tutor's claim; this is the platform conceding unasked, and recording it as a dispute would inflate `disputeRateFor` — the one number used to judge whether a tutor games refunds — with refunds they never asked for. There is a test named for it.
+
+**Restoring does not claw the credits back.** Reversing a refund days later, possibly into a negative balance because the tutor has since spent it, makes our mistake theirs. The cost of a wrong takedown stays here, which is also what keeps the decision careful. The restored status is recomputed from expiry and the unlock count rather than remembered: an enquiry that expired while it was down comes back expired, and there is a test for that too.
+
+**`RefundService` had been logging the moderation queue for a milestone.** `noteRepeatedlyDisputedRequirement` warned "consider closing it" at three disputes, into a log nobody greps. That is now `findDisputedAtLeast`, and it counts `COUNT(DISTINCT tutor_id)` rather than `COUNT(*)` — the unique index on `unlock_id` stops a tutor disputing one unlock twice but says nothing about one tutor disputing several unlocks of the same requirement, which cannot happen today and would quietly become a way to frame a student if it ever did.
+
+**Admin accounts cannot be suspended.** Not because admins are above it, but because suspending the last one locks everybody out of the console with no way back in through the product, and the state that gets you there is one misclick in a user list.
+
+**Metrics return a numerator and a denominator, never a percentage.** On a platform this young the honest reading of "8%" is "two out of twenty-five", and a dashboard that hides the denominator teaches whoever reads it to trust a number that moves four points when one tutor signs up. The whole dashboard is one snapshot in one transaction — assembling it from eight calls lets a signup land between a numerator and its denominator and produce a conversion rate above 100%.
+
+**The daily series is built from `generate_series`, bucketed in Asia/Kolkata.** Days with no activity are zeros rather than gaps: a chart that omits empty days draws a straight line through a dead week and makes an outage look like steady trade. The timezone matters because everything is stored in UTC, and a boundary five and a half hours out puts an evening signup on the wrong day for every person reading the screen.
+
+**The document viewer fetches, it does not link.** `/admin/files/**` is `@PreAuthorize`d and the access token lives in memory by design, so a browser has nothing to attach to an `<img src>`. The document is fetched with `authFetch`, handed to the DOM as a blob URL, and the URL is revoked on unmount — an object URL pins its blob for the life of the document otherwise, and leaking an Aadhaar scan per card into the tab's memory is the wrong thing to do with those particular bytes. Nothing loads until the reviewer asks, so opening a queue of twenty does not pull twenty identity documents into a browser.
+
+**Numbering correction.** `TASKS.md` reserved `V17` for the audit log. This chunk needed a migration first and the audit log will want to record against it, so admin moderation is **V17** and the audit log is now **V18**. Second numbering clash on this project, after V10/V11 — the directory is the authority, not the task file.
+
+Also shipped: the console itself — layout, sidebar, admin route guard, `robots: noindex`, and seven screens (verifications, reviews, disputes, enquiries, users, credits, pricing) plus the dashboard. `AccountMenu.tsx:24` has linked `ADMIN → /admin` since M1; it no longer 404s.
 
 ### 2026-09-01 — M5-01…M5-04: reviews, and a rating that finally means something
 

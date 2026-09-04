@@ -385,41 +385,41 @@ Both were found by walking the money path rather than by a failing test, and bot
 - ☑ `M5-04.2` Never accept an aggregate from the client. Structural: no request record has a field to bind one to, asserted over all of them by `ReviewDtoContractTest`
 - ☑ `M5-04.3` `POST /admin/reviews/recompute-ratings` — backfill and drift repair, the counterpart to the ledger's `reconcile`
 
-### ☐ `M5-05` Admin backend
+### ☑ `M5-05` Admin backend
 - ☑ `M5-05.1` Verification queue — shipped at `M1-10` (`AdminVerificationController`)
 - ☑ `M5-05.2` Review moderation — `AdminReviewController`, two queues (reviews, replies)
-- ☐ `M5-05.3` User management, suspend/reinstate
+- ☑ `M5-05.3` User management, suspend/reinstate — `AdminUserController`, `UserAdminService`. Suspension is enforced at read time by the search query and the profile lookup, not by a flag; suspending a student takes down their live enquiries
 - ☑ `M5-05.4` Credit adjustments and refund decisions — shipped at `M4-06` (`AdminCreditController`, `AdminRefundController`)
 - ☑ `M5-05.5` Package and pricing management — shipped at `M4-01` (`AdminPackageController`, `AdminSettingsController`)
-- ☐ `M5-05.6` Requirement moderation (spam, fake leads)
-- ☐ `M5-05.7` Funnel metrics: signups, requirements, unlocks, revenue, conversion
+- ☑ `M5-05.6` Requirement moderation (spam, fake leads) — `AdminRequirementController`, `RequirementModerationService`. A takedown refunds every tutor who paid, in the same transaction
+- ☑ `M5-05.7` Funnel metrics: signups, requirements, unlocks, revenue, conversion — `AdminMetricsController`, one snapshot in one transaction
 
-### ☐ `M5-06` Admin frontend
-- ☐ `M5-06.1` Layout, navigation, admin-only route guard
-- ☐ `M5-06.2` Screens for each M5-05 capability
-- ☐ `M5-06.3` Document viewer for ID/education verification
-- ☐ `M5-06.4` Metrics dashboard
+### ☑ `M5-06` Admin frontend
+- ☑ `M5-06.1` Layout, navigation, admin-only route guard — `/admin` layout, `AdminNav`, `RequireRole role="ADMIN"`, `robots: noindex`
+- ☑ `M5-06.2` Screens for each M5-05 capability — verifications, reviews, disputes, enquiries, users, credits, pricing
+- ☑ `M5-06.3` Document viewer for ID/education verification — `DocumentViewer`, blob-fetched with the bearer token, revoked on unmount, never loaded until asked for
+- ☑ `M5-06.4` Metrics dashboard — `/admin`, with an inline-SVG daily series
 
-### ☐ `M5-07` Rate limiting
-- ☐ `M5-07.1` Auth endpoints (OTP already limited at M1-03)
-- ☐ `M5-07.2` Unlock and search endpoints
-- ☐ `M5-07.3` Per-IP and per-user buckets
-- ☐ `M5-07.4` `429` with `Retry-After`
+### ☑ `M5-07` Rate limiting
+- ☑ `M5-07.1` Auth endpoints (OTP already limited at M1-03) — 20/min per IP on `/auth/**`, on top of the per-phone hourly cap
+- ☑ `M5-07.2` Unlock and search endpoints — search per IP in the filter; unlock **per tutor** in `LeadUnlockService`, and deliberately after the replay check
+- ☑ `M5-07.3` Per-IP and per-user buckets — `RateLimiter`, token buckets in memory (debt T20 for the single-instance assumption)
+- ☑ `M5-07.4` `429` with `Retry-After` — set by the filter, and by `GlobalExceptionHandler` for `RateLimitedException`
 
-### ☐ `M5-08` Audit log
-- ☐ `M5-08.1` `V17__audit.sql` — `audit_log` (**not `V11`**: that is `notifications`)
-- ☐ `M5-08.2` Every admin action recorded with before/after
-- ☐ `M5-08.3` Every credit adjustment and refund recorded
-- ☐ `M5-08.4` Admin-visible, immutable
+### ☑ `M5-08` Audit log
+- ☑ `M5-08.1` `V18__audit.sql` — `audit_log` (**not `V17`**: that is `admin_moderation`, and **not `V11`**: that is `notifications`)
+- ☑ `M5-08.2` Every admin action recorded with before/after — `AuditInterceptor` guarantees the entry exists because of the route; services describe what changed through `AuditContext`
+- ☑ `M5-08.3` Every credit adjustment and refund recorded — `AdminCreditController`, `RefundService.approve`/`reject`
+- ☑ `M5-08.4` Admin-visible, immutable — `GET /admin/audit` and `/admin/audit` in the console; `UPDATE` and `DELETE` raise at the database, as `credit_transactions` does
 
-### ☐ `M5-09` Abuse reporting
-- ☐ `M5-09.1` Report a tutor, student, review or requirement
-- ☐ `M5-09.2` Admin triage queue
+### ☑ `M5-09` Abuse reporting
+- ☑ `M5-09.1` Report a tutor, student, review or requirement — `POST /reports`, authenticated only; a quiet report link on the public tutor profile
+- ☑ `M5-09.2` Admin triage queue — `AdminAbuseReportController` and `/admin/reports`. Deciding is separate from acting, and `RefundService`'s dispute-rate signal now raises a `SYSTEM` report instead of a log line
 
-### ☐ `M5-10` Data rights (DPDP)
-- ☐ `M5-10.1` Data export
-- ☐ `M5-10.2` Account deletion with a documented retention policy
-- ☐ `M5-10.3` **Deletion must not corrupt the financial ledger** — anonymise, never delete, ledger rows
+### ☑ `M5-10` Data rights (DPDP)
+- ☑ `M5-10.1` Data export — `GET /me/export`, served as a download, including the credit ledger
+- ☑ `M5-10.2` Account deletion with a documented retention policy — `POST /me/delete`; policy in SOURCE_OF_TRUTH §3.10, and on the screen before the button
+- ☑ `M5-10.3` **Deletion must not corrupt the financial ledger** — it anonymises and never removes. The phone becomes `+99` + the zero-padded id: unique by construction, valid E.164, and an unassigned country code so it cannot collide with a real number. `deletionKeepsTheLedgerIntact` is the test that fails if this is ever "simplified" into a DELETE
 
 ### ☑ `M5-11` Review screens — **added 2026-09-01**
 
