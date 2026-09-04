@@ -151,6 +151,10 @@ export default function LeadFeedPage() {
             "That went through already. Check My leads for the contact details.",
           REQUIREMENT_NOT_OPEN:
             "This enquiry is no longer accepting responses. You have not been charged.",
+          // The per-tutor hourly allowance. Says "not been charged" explicitly because the
+          // tutor is one tap from a credit balance and will assume the worst otherwise.
+          RATE_LIMITED:
+            "You have unlocked a lot of leads in a short time. Wait a few minutes and try again 2014 you have not been charged.",
         };
         setError(friendly[body.code] ?? body.message);
         setConfirming(null);

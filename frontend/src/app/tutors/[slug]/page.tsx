@@ -12,6 +12,7 @@ import {
 import { EXAMPLE_TUTORS, findExampleTutor } from "@/lib/exampleTutors";
 import { SearchResultCard } from "@/components/SearchResultCard";
 import { SubjectTile } from "@/components/SubjectTile";
+import { ReportButton } from "@/components/ReportButton";
 import { TutorReviews } from "@/components/TutorReviews";
 import {
   Badge,
@@ -380,6 +381,12 @@ async function TutorProfile({ tutor }: { tutor: PublicTutorProfile }) {
             )}
 
             <TutorReviews reviews={reviews} tutorName={name} />
+
+            {/* Quiet by design, and last on the page. Most visitors have nothing to report, and a
+                prominent report control under every profile implies something is usually wrong. */}
+            <div className="pt-2">
+              <ReportButton subjectType="TUTOR" subjectId={tutor.id} />
+            </div>
           </div>
 
           <aside className="space-y-5">

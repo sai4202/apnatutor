@@ -40,6 +40,10 @@ const LEGAL = [
   { label: "Terms of service", href: "/terms" },
   { label: "Privacy policy", href: "/privacy" },
   { label: "Refund policy", href: "/refund-policy" },
+  // In the footer rather than behind the account menu, deliberately. The right to a copy of your
+  // data and the right to delete it are worth nothing if they are hard to find, and the footer is
+  // the one place present on every page for every visitor (M5-10).
+  { label: "Your data", href: "/account/data" },
 ];
 
 function FooterColumn({

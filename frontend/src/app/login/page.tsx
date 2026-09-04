@@ -96,11 +96,17 @@ export default function LoginPage() {
       if (!res.ok) {
         const err = body as ApiErrorBody;
         // Branch on `code`, never on `message` — messages get reworded.
-        setError(
-          err.code === "OTP_SEND_LIMIT_EXCEEDED"
-            ? "Too many codes requested. Please try again in an hour."
-            : err.message,
-        );
+        //
+        // The two limits mean different things and should not read the same. The first is
+        // about this number; the second is about the connection, which on an Indian mobile
+        // network can be shared by thousands of people who have done nothing.
+        const friendly: Record<string, string> = {
+          OTP_SEND_LIMIT_EXCEEDED:
+            "Too many codes requested for this number. Please try again in an hour.",
+          RATE_LIMITED:
+            "Too many sign-in attempts from your connection. Please wait a moment and try again.",
+        };
+        setError(friendly[err.code] ?? err.message);
         return;
       }
       // Present only when the backend is in dev mode. In any real deployment
@@ -148,6 +154,8 @@ export default function LoginPage() {
           OTP_EXPIRED: "That code has expired. Request a new one.",
           OTP_ATTEMPTS_EXCEEDED:
             "Too many incorrect attempts. Please request a new code.",
+          RATE_LIMITED:
+            "Too many attempts from your connection. Please wait a moment and try again.",
         };
         setError(friendly[err.code] ?? err.message);
         return;
