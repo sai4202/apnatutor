@@ -18,6 +18,30 @@ export const BACKEND_ORIGIN = API_BASE_URL.replace(/\/api\/v1\/?$/, "");
  * `code` is a stable machine enum — switch on it. `message` is for humans and may be reworded at
  * any time, so never branch on it.
  */
+/**
+ * A nullable field from this API is **absent**, not null.
+ *
+ * The backend sets `default-property-inclusion: non_null`, so Jackson omits every null rather than
+ * serialising it. That makes `field !== null` a bug: `undefined !== null` is true, so the guard
+ * passes and the next line reads a property of undefined. It cost the city x subject SEO pages a
+ * 500 the first time an unrated tutor appeared in results — caught by an end-to-end test, because
+ * every type here says `| null` and TypeScript therefore believes the strict check is sound.
+ *
+ * Use `!= null` (loose) for anything that came off the wire. It catches both.
+ */
+
+/**
+ * A nullable field from this API is **absent**, not null.
+ *
+ * The backend sets `default-property-inclusion: non_null`, so Jackson omits every null rather
+ * than serialising it. That makes `field !== null` a bug: `undefined !== null` is true, so the
+ * guard passes and the next line reads a property of undefined. It cost the city × subject SEO
+ * pages a 500 the first time an unrated tutor appeared in results — found by an end-to-end test,
+ * because every type here says `| null` and TypeScript therefore believes the strict check sound.
+ *
+ * Use `!= null` (loose) for anything that came off the wire. It catches both.
+ */
+
 export interface ApiError {
   code: string;
   message: string;
@@ -342,4 +366,48 @@ export async function fetchTutorReviews(id: number): Promise<PublicReview[]> {
   } catch {
     return [];
   }
+}
+
+/**
+ * Adapts a search result to the shape {@link TutorCard} renders.
+ *
+ * Lives here rather than in the component because two callers need it — the homepage strip and
+ * anywhere else that reuses the card — and a second copy of this mapping is a second place for the
+ * fee unit or the verified flag to be read wrong.
+ *
+ * `locality` and `city` are both taken from the one locality string the search projection carries.
+ * The card shows them together, and the API does not split them: a tutor's searchable area is one
+ * value, and inventing a split here would guess wrong for online-only tutors.
+ */
+export function toTutorSummary(result: TutorSearchResult): {
+  name: string;
+  headline: string;
+  subjects: string[];
+  rating: number;
+  reviewCount: number;
+  feeFromPaise: number;
+  feeUnit: "PER_HOUR" | "PER_MONTH";
+  locality: string;
+  city: string;
+  experienceYears: number;
+  verified: boolean;
+  modes: ("STUDENT_HOME" | "TUTOR_PLACE" | "ONLINE")[];
+} {
+  return {
+    name: result.displayName ?? "Tutor",
+    headline: result.headline ?? "",
+    subjects: result.subjects,
+    // Zero rather than null: the card renders stars, and an unrated tutor shows none. The
+    // review count beside it is what tells a reader the difference between "no reviews" and
+    // "reviewed badly", which is why both are passed rather than one derived number.
+    rating: result.avgRating ?? 0,
+    reviewCount: result.reviewCount,
+    feeFromPaise: result.feeMinPaise ?? 0,
+    feeUnit: result.feeUnit ?? "PER_MONTH",
+    locality: result.locality ?? "",
+    city: result.locality ?? "",
+    experienceYears: result.experienceYears,
+    verified: result.idVerified,
+    modes: result.teachingModes as ("STUDENT_HOME" | "TUTOR_PLACE" | "ONLINE")[],
+  };
 }

@@ -52,6 +52,15 @@ export default function RootLayout({
             Server Component — children are passed through, not re-rendered on
             the client. The public pages keep shipping zero JavaScript. */}
         <AuthProvider>
+          {/* Skip link (M6-03.1). First thing in the tab order, invisible until focused. Without
+              it a keyboard or screen-reader user tabs through the whole header — search box,
+              subject menu, account links — on every page before reaching the content. */}
+          <a
+            href="#main"
+            className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-50 focus:rounded-lg focus:bg-brand-600 focus:px-4 focus:py-2.5 focus:text-sm focus:font-semibold focus:text-white"
+          >
+            Skip to content
+          </a>
           <SiteHeader />
           <main id="main" className="flex-1">
             {children}

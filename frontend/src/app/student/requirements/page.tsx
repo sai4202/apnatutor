@@ -230,7 +230,7 @@ export default function MyRequirementsPage() {
                   </p>
                 </div>
 
-                {requirement.budgetAmountPaise !== null && (
+                {requirement.budgetAmountPaise != null && (
                   <div className="text-right">
                     <p className="text-lg font-bold text-ink-900">
                       {formatMoney(requirement.budgetAmountPaise)}

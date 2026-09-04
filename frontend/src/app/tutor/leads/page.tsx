@@ -341,7 +341,7 @@ export default function LeadFeedPage() {
                         .join(" · ")}
                     </p>
                   </div>
-                  {lead.budgetAmountPaise !== null && (
+                  {lead.budgetAmountPaise != null && (
                     <div className="text-right">
                       <p className="text-lg font-bold text-ink-900">
                         {formatMoney(lead.budgetAmountPaise)}

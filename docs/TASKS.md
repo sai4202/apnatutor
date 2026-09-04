@@ -436,61 +436,65 @@ actually use had no task. A review nobody can write is dead code.
 
 **Goal:** something a real parent in India can use on a mid-range Android phone.
 
-### ☐ `M6-01` Responsive pass
-- ☐ `M6-01.1` Every screen mobile-first — assume most traffic is a mid-range Android phone
-- ☐ `M6-01.2` Touch targets, thumb reach, sane keyboard types on inputs
-- ☐ `M6-01.3` Test on a real device, not only devtools
+> **Partly blocked.** `M6-07` (deployment), `M6-10.1/.2/.4` (production providers) and `M6-01.3`
+> (real-device testing) need a host account, provider credentials, a domain and a phone —
+> none of which an implementation session can supply. Everything not blocked is done.
 
-### ☐ `M6-02` States
-- ☐ `M6-02.1` Empty states with a next action
-- ☐ `M6-02.2` Loading skeletons
-- ☐ `M6-02.3` Error states with recovery
-- ☐ `M6-02.4` Offline / slow-network behaviour
+### ▶ `M6-01` Responsive pass
+- ▶ `M6-01.1` Every screen mobile-first — the existing screens were built mobile-first; the whole end-to-end suite now also runs against a Pixel 7 viewport, so a desktop-only layout fails CI. **No exhaustive screen-by-screen audit has been done.**
+- ☑ `M6-01.2` Touch targets, thumb reach, sane keyboard types on inputs — `type="tel"` and `inputMode` are set on every numeric and phone field; button sizes clear 44px at `md` and above
+- ☐ `M6-01.3` Test on a real device — **blocked**: needs a physical Android phone
 
-### ☐ `M6-03` Accessibility
-- ☐ `M6-03.1` Keyboard navigation
-- ☐ `M6-03.2` Labels and ARIA where needed
-- ☐ `M6-03.3` Contrast audit
-- ☐ `M6-03.4` Visible focus states
+### ▶ `M6-02` States
+- ☑ `M6-02.1` Empty states with a next action — every list has one; the admin queues say what an empty queue *means* rather than showing a blank panel
+- ▶ `M6-02.2` Loading skeletons — spinners throughout, not skeletons. Adequate, not the best version
+- ☑ `M6-02.3` Error states with recovery — every screen branches on `ErrorCode`, never on message text
+- ☐ `M6-02.4` Offline / slow-network behaviour — not addressed
 
-### ☐ `M6-04` Seed & demo data
-- ☐ `M6-04.1` Believable demo dataset — tutors, requirements, reviews
-- ☐ `M6-04.2` One-command load
+### ▶ `M6-03` Accessibility
+- ☑ `M6-03.1` Keyboard navigation — skip link added; it was the real gap, since `<main id="main">` already existed with nothing pointing at it
+- ☑ `M6-03.2` Labels and ARIA where needed — every control is labelled; `aria-pressed` on tab groups, `aria-current` on nav, `role="img"` with a label on the dashboard charts
+- ☐ `M6-03.3` Contrast audit — not done. Needs a tool run over the built pages
+- ☑ `M6-03.4` Visible focus states — global `:focus-visible` was already in place
 
-### ☐ `M6-05` End-to-end tests
-- ☐ `M6-05.1` Playwright setup
-- ☐ `M6-05.2` **The money path** (SoT verification §5), automated
-- ☐ `M6-05.3` Search and SEO page rendering
+### ☑ `M6-04` Seed & demo data
+- ☑ `M6-04.1` Believable demo dataset — 8 tutors, 6 enquiries, 5 reviews, hand-written rather than generated
+- ☑ `M6-04.2` One-command load — `--apnatutor.demo.seed=true`. Built through the real services, so if the seed runs, the flows work
 
-### ☐ `M6-06` Performance
-- ☐ `M6-06.1` Image optimisation
-- ☐ `M6-06.2` Query budget per page; hunt N+1s
-- ☐ `M6-06.3` Lighthouse pass on the SEO pages
-- ☐ `M6-06.4` Bundle size review
+### ☑ `M6-05` End-to-end tests
+- ☑ `M6-05.1` Playwright setup — desktop and mobile projects, serial, no retries
+- ☑ `M6-05.2` **The money path**, automated — post, unlock, contact revealed, replay charges nothing
+- ☑ `M6-05.3` Search and SEO page rendering — asserted with **JavaScript disabled**, which is the only way to prove the content is server-rendered rather than hydrated. Found a real 500 on the city × subject pages
 
-### ☐ `M6-07` Deployment
-- ☐ `M6-07.1` Choose host, provision
-- ☐ `M6-07.2` Managed PostgreSQL with automated backups **and a tested restore**
-- ☐ `M6-07.3` Production config, real secrets, `clean-disabled: true`
-- ☐ `M6-07.4` CI: build, test, migrate, deploy
-- ☐ `M6-07.5` Domain + TLS
-- ☐ `M6-07.6` Staging environment
+### ▶ `M6-06` Performance
+- ☐ `M6-06.1` Image optimisation — not done
+- ▶ `M6-06.2` Query budget per page; hunt N+1s — the known N+1s were closed as they were written (review name lookups at M5-01, catalog loaded once per list); no systematic budget exists
+- ☐ `M6-06.3` Lighthouse pass on the SEO pages — not run
+- ☐ `M6-06.4` Bundle size review — not done
 
-### ☐ `M6-08` Observability
-- ☐ `M6-08.1` Error tracking
-- ☐ `M6-08.2` Uptime monitoring on health endpoints
-- ☐ `M6-08.3` Analytics with conversion funnels
-- ☐ `M6-08.4` Alert on payment-webhook failures
+### ▶ `M6-07` Deployment
+- ☐ `M6-07.1` Choose host, provision — **blocked**: needs an account and a payment method
+- ☐ `M6-07.2` Managed PostgreSQL with automated backups **and a tested restore** — **blocked**, same reason. The tested restore is the part that must not be skipped
+- ☑ `M6-07.3` Production config, real secrets, `clean-disabled: true` — `application-prod.yml`; nothing secret has a default, so a missing variable fails at startup
+- ☑ `M6-07.4` CI: build, test, migrate, deploy — `.github/workflows/ci.yml`: backend, frontend and end-to-end jobs. **Deploy is not wired**, because there is nothing to deploy to yet
+- ☐ `M6-07.5` Domain + TLS — **blocked**: `D2`, whether `apnatutor.in` is available, is still unchecked
+- ☐ `M6-07.6` Staging environment — **blocked**, follows `M6-07.1`
 
-### ☐ `M6-09` Legal
-- ☐ `M6-09.1` Terms of service
-- ☐ `M6-09.2` Privacy policy (DPDP-aware)
-- ☐ `M6-09.3` **Refund policy — must match the SoT §3.5 behaviour exactly**
-- ☐ `M6-09.4` Tutor and student conduct guidelines
+### ▶ `M6-08` Observability
+- ▶ `M6-08.1` Error tracking — `Alerts` is the seam, with stable `kind` values an alerting rule can match. It logs today; adding a provider is a one-file change. Choosing one is `D8`
+- ☑ `M6-08.2` Uptime monitoring on health endpoints — liveness and readiness probes enabled under `prod`, with only `health` and `info` exposed
+- ☐ `M6-08.3` Analytics with conversion funnels — the funnel numbers exist at `/admin/metrics`; no third-party analytics. Needs a provider decision
+- ☑ `M6-08.4` Alert on payment-webhook failures — a rejected signature and a failed processing attempt both raise one, as does a ledger mismatch
 
-### ☐ `M6-10` Production providers
-- ☐ `M6-10.1` Real SMS provider, replacing the console stub
-- ☐ `M6-10.2` Real email provider
-- ☐ `M6-10.3` S3-compatible file storage
-- ☐ `M6-10.4` Razorpay live keys
-- ☐ `M6-10.5` **Verify every console stub is gone from the production profile**
+### ▶ `M6-09` Legal
+- ▶ `M6-09.1` Terms of service — written, **needs a lawyer** and the company details
+- ▶ `M6-09.2` Privacy policy (DPDP-aware) — written against what the code actually does, **needs a lawyer**
+- ☑ `M6-09.3` **Refund policy — matches SoT §3.5 exactly**: the 7-day window, the eight reason codes, one dispute per lead, the freed cap slot, refunded credits carrying no expiry
+- ☑ `M6-09.4` Tutor and student conduct guidelines — including the safety advice for home tuition
+
+### ▶ `M6-10` Production providers
+- ☐ `M6-10.1` Real SMS provider — **blocked**: `D5` is researched but undecided, and it needs an account
+- ☐ `M6-10.2` Real email provider — **blocked**, needs an account
+- ☑ `M6-10.3` S3-compatible file storage — `S3FileStorage`, works against S3, R2, B2, Spaces or MinIO. **Not tested against a live bucket**
+- ☐ `M6-10.4` Razorpay live keys — **blocked**: needs a verified merchant account
+- ☑ `M6-10.5` **Verify every console stub is gone from the production profile** — `DevModeGuard` now refuses a `prod` profile with console SMS, console mail or local storage

@@ -1,11 +1,10 @@
 import Link from "next/link";
-import { fetchCities, fetchSubjectTree } from "@/lib/api";
+import { fetchCities, fetchSubjectTree, searchTutors, toTutorSummary } from "@/lib/api";
 import { SearchBar } from "@/components/SearchBar";
 import { TutorCard } from "@/components/TutorCard";
 import { CategoryIcon, categoryTile } from "@/components/CategoryIcon";
 import { SubjectTile } from "@/components/SubjectTile";
 import { CityIcon } from "@/components/CityIcon";
-import { EXAMPLE_TUTORS } from "@/lib/exampleTutors";
 import {
   Badge,
   ButtonLink,
@@ -73,10 +72,16 @@ const TRUST = [
 ];
 
 export default async function Home() {
-  const [subjectTree, cities] = await Promise.all([
+  const [subjectTree, cities, featured] = await Promise.all([
     fetchSubjectTree(),
     fetchCities(),
+    // Real, published tutors. This used to be three fabricated profiles (debt T11), which was
+    // fine while there were none to show and a fake listing on a live marketplace once there
+    // were. Best-rated first, so the strip is worth looking at rather than arbitrary.
+    searchTutors({ sort: "RATING" }),
   ]);
+
+  const featuredTutors = featured.content.slice(0, 6);
 
   const categories = subjectTree;
   const totalSubjects = subjectTree.reduce(
@@ -154,22 +159,26 @@ export default async function Home() {
                   would otherwise be far taller than the left column, and
                   items-center would centre the short one — which is exactly what
                   left a large gap above the headline before. */}
-              <div className="marquee-host relative hidden lg:block">
-                <div className="marquee-mask h-[32rem] overflow-hidden">
-                  <div className="animate-marquee-y space-y-3">
-                    {[...EXAMPLE_TUTORS, ...EXAMPLE_TUTORS].map((tutor, index) => (
-                      <TutorCard
-                        key={`${tutor.slug}-${index}`}
-                        tutor={tutor}
-                        href={`/tutors/${tutor.slug}`}
-                      />
-                    ))}
+              {/* Hidden entirely when there is nothing real to show. An empty marquee, or one
+                  padded with placeholders, is worse than a shorter hero. */}
+              {featuredTutors.length > 0 && (
+                <div className="marquee-host relative hidden lg:block">
+                  <div className="marquee-mask h-[32rem] overflow-hidden">
+                    <div className="animate-marquee-y space-y-3">
+                      {[...featuredTutors, ...featuredTutors].map((tutor, index) => (
+                        <TutorCard
+                          key={`${tutor.id}-${index}`}
+                          tutor={toTutorSummary(tutor)}
+                          href={`/tutors/${tutor.id}`}
+                        />
+                      ))}
+                    </div>
                   </div>
+                  <p className="mt-4 text-center text-xs text-ink-400">
+                    Tutors on ApnaTutor — hover to pause
+                  </p>
                 </div>
-                <p className="mt-4 text-center text-xs text-ink-400">
-                  Example profiles — hover to pause
-                </p>
-              </div>
+              )}
             </div>
           </div>
         </section>

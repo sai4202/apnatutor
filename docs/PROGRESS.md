@@ -2,8 +2,8 @@
 
 > Update this **in the same session as the code change**, never later. If a session ends without a changelog entry, the next session starts blind.
 
-**Current milestone:** M5 complete. **M6 — Polish & launch** is next, and is deferred at your request.
-**Overall:** ███████████ **M0–M5 complete** · **250 tests** · the marketplace works end to end, it can be run and moderated from a console, everything done there is on the record, the front door is bounded, and people can take their data or leave with it
+**Current milestone:** M6 — Polish & launch. Everything that does not need an account, a credit card or a decision is done.
+**Overall:** ████████████ **M0–M5 complete, M6 substantially done** · **252 backend + 18 end-to-end tests** · the marketplace works, can be moderated, records what it does, bounds its front door, lets people leave with their data — and now has demo data, browser tests, legal pages, CI and a production profile
 
 ---
 
@@ -11,9 +11,9 @@
 
 Read this first when resuming. Keep it to exactly three, always current.
 
-1. **Decide whether to start M6.** It is deferred at your request and is the whole launch surface: responsive pass, empty and error states, accessibility, seed data, end-to-end tests, performance, deployment, observability, legal pages, production providers. Nothing in it is blocked.
-2. If M6 starts, **`M6-07` (deployment) is where the debts land together** — `T13` and `T20` are the same single-instance assumption (the credit expiry job and the rate limit buckets), and `T21` is the server-side-rendering IP problem that only becomes fixable once a proxy exists. One piece of work, three debts.
-3. **`T11` must be deleted, not left behind**: `lib/exampleTutors.ts` is three fabricated tutor profiles powering the hero and `/tutors/[slug]`. Every surface is labelled as an example today. A forgotten sample profile that outlives launch is a fake listing on a live marketplace.
+1. **Decide the three things only you can decide**, because everything left is blocked on one of them: a host (`M6-07.1`), an SMS provider (`D5`), and whether `apnatutor.in` is available (`D2`). None is an engineering question, and each unblocks several tasks at once.
+2. **`M6-07.2` — managed PostgreSQL with a _tested restore_.** Not just backups. An untested backup is a belief, and the day it matters is the worst possible day to find out. This is the single highest-risk unticked item on the whole board.
+3. **Get a lawyer over `/terms` and `/privacy`.** Both are written and both say on the page that they are drafts. The refund policy needs no review — it matches SoT §3.5 exactly — but the other two carry company details that do not exist yet.
 
 Full breakdown in [TASKS.md](./TASKS.md); open decisions and debt in [PENDING.md](./PENDING.md).
 
@@ -29,11 +29,41 @@ Full breakdown in [TASKS.md](./TASKS.md); open decisions and debt in [PENDING.md
 | M3 — Requirements & lead loop | ✅ Done (2026-09-01) |
 | M4 — Credits & payments | ✅ Done (2026-09-01) |
 | M5 — Reviews, admin & trust | ✅ Done (2026-09-04) |
-| M6 — Polish & launch | ⏸️ Deferred at your request |
+| M6 — Polish & launch | 🟡 Substantially done — what remains needs a host, provider credentials, a domain, or a lawyer |
 
 ---
 
 ## Changelog
+
+### 2026-09-04 — M6: everything that does not need an account or a credit card
+
+**252 backend tests and 18 end-to-end tests pass.** No migration.
+
+**The end-to-end tests found a real 500 within an hour of existing, on the pages that matter most.** `/tutors/hyderabad/mathematics` — a programmatic SEO page, the primary acquisition channel — crashed on `avgRating.toFixed(1)` for any unrated tutor. The cause is worth writing down because it is a trap the whole frontend sits in: the backend sets `default-property-inclusion: non_null`, so Jackson **omits** nulls rather than serialising them. A nullable field is therefore *absent*, not null, and `field !== null` passes on `undefined` and then reads a property of it. TypeScript could not help: every type says `| null`, so the strict check looks sound. Eleven guards across six files were wrong the same way; the note explaining it now sits at the top of `lib/api.ts`.
+
+**The demo data is built through the real services, not SQL.** A tutor is published by the same `publish` that enforces the 60% completeness bar, an unlock spends real credits through the ledger, and a review goes through moderation before it appears. That is slower than inserting rows and buys the thing demo data is for: **if the seed runs, the flows work.** A dataset inserted directly can describe a state the application cannot reach, which is worse than no dataset.
+
+**Eight tutors, hand-written.** A generator produces "Tutor 47 teaches Subject 3 in Locality 9", which exercises a query and tells you nothing about whether the marketplace looks trustworthy. Fees sit in the range Hyderabad tuition actually occupies, because a demo where everything costs ₹500/month teaches the wrong thing about the pricing bands.
+
+**`lib/exampleTutors.ts` is gone — debt T11 repaid.** Three fabricated profiles powered the homepage marquee and a `/tutors/[slug]` branch. They were labelled and noindexed, and they were still fake listings on a marketplace. The homepage now shows real published tutors, best-rated first, and renders nothing at all when there are none — an empty strip beats a padded one.
+
+**The SEO tests run with JavaScript disabled.** That is the only way to prove content is server-rendered rather than hydrated: both look identical in a browser, and the difference is whether Google sees anything. The city page, the city × subject page and the homepage's subject links are all asserted this way.
+
+**The money-path test fails rather than skips when the tutor has no credits.** It first skipped, which reports green while testing nothing. The demo seeder now funds the dev tutor, outside its own idempotency check so a re-run tops them up.
+
+**`DevModeGuard` now refuses a production profile with any console stub left wired up** (M6-10.5). Each of the three runs *without error*: console SMS logs the OTP instead of sending it, so nobody can sign in and every code is in a log file; console mail does the same to receipts; local disk storage accepts uploads and loses them on the next redeploy, taking tutors' ID documents with them. None produces an exception. All three produce a deployment that looks healthy and is quietly broken — which is exactly what a startup check is for.
+
+**S3 storage exists but has never touched a live bucket.** It works against S3, R2, B2, Spaces or MinIO through an endpoint override, because egress pricing differs by an order of magnitude between them and file serving is the one cost here that scales with traffic rather than users. Writing it surfaced a smaller problem: `LocalFileStorage` and the new class had **different key-validation patterns**, which is the drift the shared `StoredUpload` was extracted to prevent — a key one backend accepts and the other refuses is a file that uploads in development and 404s in production.
+
+**`Alerts` is a seam, not a pager.** Everything already logs its failures, which is the problem: a log full of errors has no signal left. Four events now raise a distinct, greppable `ALERT kind=...` — a rejected webhook signature, a failed webhook, a ledger mismatch, an uncredited payment. It logs today; adding a provider is a one-file change, and scattering some SDK through the payment code before that provider is chosen would mean undoing it in a dozen files if the choice turned out wrong.
+
+**The refund policy is the one legal page that had to be exact.** It describes behaviour the code enforces line for line: the seven-day window, the eight reason codes, one dispute per lead, the freed cap slot, refunded credits carrying no expiry. A policy promising something the software does not do is worse than no policy — it is a commitment made to every tutor who reads it. If SoT §3.5 changes, that page changes in the same commit.
+
+**The terms and privacy pages are drafts that need a lawyer.** What an engineer can get right is that every clause describes what the software actually does; what they cannot is enforceability, or the company details in the last section. Both say so on the page rather than only in a commit message.
+
+**A skip link was the real accessibility gap.** `<main id="main">` already existed with nothing pointing at it, and global `:focus-visible` was already in place — so keyboard users were tabbing through the entire header on every page for want of eight lines.
+
+**What is not done, and why.** Deployment, a domain, real SMS, real email and live Razorpay keys all need an account, a payment method or a decision that is not an engineering one. The contrast audit, Lighthouse and the bundle review need a run rather than a build, and the responsive pass has had no screen-by-screen audit — the mobile end-to-end project catches a broken layout, not an ugly one. All of it is marked in TASKS.md rather than quietly ticked.
 
 ### 2026-09-04 — M5-09 and M5-10: reporting, and the right to leave. **M5 is closed.**
 

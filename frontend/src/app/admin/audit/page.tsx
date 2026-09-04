@@ -170,7 +170,7 @@ function Entry({ row }: { row: AuditRow }) {
               <>
                 {" → "}
                 {row.targetType.replaceAll("_", " ").toLowerCase()}
-                {row.targetId !== null && ` #${row.targetId}`}
+                {row.targetId != null && ` #${row.targetId}`}
               </>
             )}
             {" · "}
@@ -191,7 +191,7 @@ function Entry({ row }: { row: AuditRow }) {
           }
         >
           {row.outcome.charAt(0) + row.outcome.slice(1).toLowerCase()}
-          {row.httpStatus !== null && ` ${row.httpStatus}`}
+          {row.httpStatus != null && ` ${row.httpStatus}`}
         </Badge>
       </div>
 

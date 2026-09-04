@@ -193,7 +193,7 @@ function EnquiryCard({
           </h3>
           <p className="text-sm text-ink-600">
             {row.location ?? "No location"} · {row.mode.replace("_", " ").toLowerCase()}
-            {row.budgetAmountPaise !== null && (
+            {row.budgetAmountPaise != null && (
               <> · {rupees(row.budgetAmountPaise)} {row.budgetUnit === "PER_HOUR" ? "/hr" : "/mo"}</>
             )}
           </p>

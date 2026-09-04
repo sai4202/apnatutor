@@ -540,7 +540,7 @@ function ReceiptDialog({
                 {rupees(receipt.amountPaise)}
               </td>
             </tr>
-            {receipt.taxPaise !== null && (
+            {receipt.taxPaise != null && (
               <tr>
                 <td className="py-2 text-ink-600">GST</td>
                 <td className="py-2 text-right text-ink-900">

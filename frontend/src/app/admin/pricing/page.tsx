@@ -276,7 +276,7 @@ function SettingRow({
           onChange={(event) => setValue(event.target.value)}
           className="h-9 w-28 rounded-lg border-0 px-2.5 text-sm tabular-nums ring-1 ring-ink-200 focus:ring-2 focus:ring-brand-500"
         />
-        {(setting.minValue !== null || setting.maxValue !== null) && (
+        {(setting.minValue != null || setting.maxValue != null) && (
           <p className="mt-0.5 text-xs text-ink-400">
             {setting.minValue ?? "—"} to {setting.maxValue ?? "—"}
           </p>

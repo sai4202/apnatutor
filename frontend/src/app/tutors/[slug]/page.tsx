@@ -9,7 +9,6 @@ import {
   searchTutors,
   type PublicTutorProfile,
 } from "@/lib/api";
-import { EXAMPLE_TUTORS, findExampleTutor } from "@/lib/exampleTutors";
 import { SearchResultCard } from "@/components/SearchResultCard";
 import { SubjectTile } from "@/components/SubjectTile";
 import { ReportButton } from "@/components/ReportButton";
@@ -24,16 +23,12 @@ import {
 } from "@/components/ui";
 
 /**
- * One route, three meanings.
+ * One route, two meanings.
  *
- * <p>`/tutors/123` is a tutor profile, `/tutors/hyderabad` is a city landing page,
- * and `/tutors/ananya-reddy` is one of the example profiles. Next matches all
- * three with the same `[slug]` segment, so this resolves which is which.
+ * <p>`/tutors/123` is a tutor profile and `/tutors/hyderabad` is a city landing page. Next matches
+ * both with the same `[slug]` segment, so this resolves which is which.
  *
- * <p>Order matters: numeric first (a real profile), then city, then example. A
- * city slug and an example slug can never collide — cities come from the catalog
- * and examples are hardcoded — but checking numeric first means a real tutor
- * always wins if one ever were named like a city.
+ * <p>Numeric first, so a real tutor always wins if one is ever numbered like a city slug.
  *
  * <p>The alternative, prefixing routes as `/tutors/city/...` and
  * `/tutors/profile/...`, would be simpler code and worse URLs. `/tutors/hyderabad`
@@ -52,9 +47,6 @@ async function resolve(slug: string) {
   const cities = await fetchCities();
   const city = cities.find((c) => c.slug === slug);
   if (city) return { kind: "city" as const, city };
-
-  const example = findExampleTutor(slug);
-  if (example) return { kind: "example" as const, example };
 
   return { kind: "unknown" as const };
 }
@@ -80,15 +72,6 @@ export async function generateMetadata({ params }: Params): Promise<Metadata> {
     };
   }
 
-  if (resolved.kind === "example") {
-    return {
-      title: `${resolved.example.name} — ${resolved.example.headline}`,
-      // Example data must never be indexed: it would put fabricated tutors into
-      // Google under our domain.
-      robots: { index: false, follow: false },
-    };
-  }
-
   return { title: "Not found" };
 }
 
@@ -98,7 +81,6 @@ export default async function TutorSlugPage({ params }: Params) {
 
   if (resolved.kind === "city") return <CityLanding city={resolved.city} />;
   if (resolved.kind === "tutor") return <TutorProfile tutor={resolved.profile} />;
-  if (resolved.kind === "example") return <ExampleProfile slug={slug} />;
 
   notFound();
 }
@@ -233,7 +215,7 @@ async function TutorProfile({ tutor }: { tutor: PublicTutorProfile }) {
             jobTitle: "Tutor",
             description: tutor.headline,
             knowsAbout: tutor.subjects.map((s) => s.name),
-            ...(tutor.avgRating !== null && tutor.reviewCount > 0
+            ...(tutor.avgRating != null && tutor.reviewCount > 0
               ? {
                   aggregateRating: {
                     "@type": "AggregateRating",
@@ -279,7 +261,7 @@ async function TutorProfile({ tutor }: { tutor: PublicTutorProfile }) {
               )}
 
               <div className="mt-4 flex flex-wrap items-center gap-x-5 gap-y-2 text-sm text-ink-600">
-                {tutor.avgRating !== null ? (
+                {tutor.avgRating != null ? (
                   <span className="flex items-center gap-1.5">
                     <Icon name="star" className="h-4 w-4 text-amber-500" />
                     <span className="font-semibold text-ink-900">
@@ -303,7 +285,7 @@ async function TutorProfile({ tutor }: { tutor: PublicTutorProfile }) {
             </div>
 
             <div className="shrink-0 rounded-xl bg-white p-5 text-center ring-1 ring-ink-200 sm:w-52">
-              {tutor.feeMinPaise !== null && (
+              {tutor.feeMinPaise != null && (
                 <>
                   <p className="text-sm text-ink-500">Starting from</p>
                   <p className="mt-0.5 text-2xl font-bold text-ink-900">
@@ -441,52 +423,6 @@ async function TutorProfile({ tutor }: { tutor: PublicTutorProfile }) {
             </Card>
           </aside>
         </div>
-      </Container>
-    </>
-  );
-}
-
-/* -------------------------------------------------------------------------- */
-/* Example profile — noindex, clearly labelled                                 */
-/* -------------------------------------------------------------------------- */
-
-function ExampleProfile({ slug }: { slug: string }) {
-  const tutor = findExampleTutor(slug);
-  if (!tutor) notFound();
-
-  return (
-    <>
-      <div className="border-b border-warning-600/20 bg-warning-50">
-        <Container className="py-2.5">
-          <p className="text-center text-sm text-ink-700">
-            <span className="font-semibold">Example profile.</span> Real tutor
-            listings open once verification is complete.
-          </p>
-        </Container>
-      </div>
-
-      <Container className="py-10">
-        <div className="mx-auto max-w-2xl text-center">
-          <h1 className="text-3xl font-bold">{tutor.name}</h1>
-          <p className="mt-2 text-lg text-ink-600">{tutor.headline}</p>
-          <p className="mt-6 leading-relaxed text-ink-600">{tutor.about}</p>
-          <div className="mt-8 flex flex-col justify-center gap-3 sm:flex-row">
-            <ButtonLink href="/tutors" size="lg">
-              Browse real tutors
-              <Icon name="arrow" className="h-5 w-5" />
-            </ButtonLink>
-            <ButtonLink href="/post-requirement" variant="secondary" size="lg">
-              Post a requirement
-            </ButtonLink>
-          </div>
-        </div>
-
-        {EXAMPLE_TUTORS.length > 1 && (
-          <p className="mt-10 text-center text-sm text-ink-400">
-            This page exists so the profile layout can be reviewed before real
-            listings arrive.
-          </p>
-        )}
       </Container>
     </>
   );

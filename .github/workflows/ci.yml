@@ -1,0 +1,170 @@
+# Build, test and check both projects — M6-07.4.
+#
+# Two independent jobs, because backend/ and frontend/ are independent projects
+# (ADR #11). A frontend typo must not stop the backend suite from telling you
+# whether the money path still works.
+#
+# The e2e job is separate again, because it needs both of them plus a database,
+# and a failure there means something different from a unit test failing.
+
+name: CI
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+
+concurrency:
+  # A second push supersedes the first. Nobody reads the results of a run against
+  # code that has already been replaced.
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+
+    services:
+      # The project has no Docker locally (ADR #5), so integration tests run
+      # against a real local PostgreSQL. CI gets the same thing from a service
+      # container: same database, same migrations, no Testcontainers.
+      postgres:
+        image: postgres:18
+        env:
+          POSTGRES_PASSWORD: postgres
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          # Matches ADR #4. Temurin 21 is the documented fallback if a
+          # bytecode-manipulating library ever breaks on a non-LTS JDK.
+          java-version: "26"
+          distribution: temurin
+          cache: maven
+
+      - name: Create the test database
+        # T5: the test database must exist on any machine running the suite, and
+        # CI is the machine that will not have run db-setup.sql by hand.
+        run: psql -h localhost -U postgres -f backend/scripts/db-setup.sql
+        env:
+          PGPASSWORD: postgres
+
+      - name: Build and test
+        working-directory: backend
+        run: ./mvnw --batch-mode verify
+
+      - name: Upload test reports
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-surefire-reports
+          path: backend/target/surefire-reports/
+
+  frontend:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install
+        working-directory: frontend
+        run: npm ci
+
+      - name: Lint
+        working-directory: frontend
+        run: npm run lint
+
+      - name: Build
+        working-directory: frontend
+        # next build type-checks as well, so this is the type check too.
+        run: npm run build
+
+  e2e:
+    runs-on: ubuntu-latest
+    # Only after both halves pass on their own. An end-to-end failure caused by a
+    # compile error is noise, and it is slow noise.
+    needs: [backend, frontend]
+
+    services:
+      postgres:
+        image: postgres:18
+        env:
+          POSTGRES_PASSWORD: postgres
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          java-version: "26"
+          distribution: temurin
+          cache: maven
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Create the database
+        run: psql -h localhost -U postgres -f backend/scripts/db-setup.sql
+        env:
+          PGPASSWORD: postgres
+
+      - name: Start the backend with demo data
+        working-directory: backend
+        # Dev mode on, deliberately and only here: the OTP is fixed and returned
+        # in the response, which is what makes signing in scriptable. DevModeGuard
+        # makes this combination impossible under a prod profile.
+        run: |
+          ./mvnw --batch-mode spring-boot:run \
+            -Dspring-boot.run.arguments="--apnatutor.demo.seed=true" &
+          for i in $(seq 1 60); do
+            curl -sf http://127.0.0.1:8080/actuator/health && break
+            sleep 5
+          done
+        env:
+          APNATUTOR_DEV_MODE: "true"
+          SPRING_DATASOURCE_URL: jdbc:postgresql://localhost:5432/apnatutor_dev
+          SPRING_DATASOURCE_USERNAME: apnatutor
+          SPRING_DATASOURCE_PASSWORD: apnatutor
+
+      - name: Install and build the frontend
+        working-directory: frontend
+        run: |
+          npm ci
+          npx playwright install --with-deps chromium
+          npm run build
+
+      - name: Run the end-to-end tests
+        working-directory: frontend
+        run: npm run test:e2e
+        env:
+          CI: "true"
+
+      - name: Upload the Playwright report
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: frontend/playwright-report/

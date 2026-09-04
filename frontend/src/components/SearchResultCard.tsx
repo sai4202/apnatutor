@@ -71,7 +71,7 @@ export function SearchResultCard({ tutor }: { tutor: TutorSearchResult }) {
             )}
 
             <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-ink-500">
-              {tutor.avgRating !== null ? (
+              {tutor.avgRating != null ? (
                 <span className="flex items-center gap-1">
                   <Icon name="star" className="h-4 w-4 text-amber-500" />
                   <span className="font-semibold text-ink-800">
@@ -115,7 +115,7 @@ export function SearchResultCard({ tutor }: { tutor: TutorSearchResult }) {
           </div>
 
           <div className="hidden shrink-0 text-right sm:block">
-            {tutor.feeMinPaise !== null && (
+            {tutor.feeMinPaise != null && (
               <>
                 <p className="text-xl font-bold text-ink-900">
                   {formatFee(tutor.feeMinPaise)}
@@ -132,7 +132,7 @@ export function SearchResultCard({ tutor }: { tutor: TutorSearchResult }) {
         </div>
 
         {/* The fee repeats on narrow screens, where the column above is hidden. */}
-        {tutor.feeMinPaise !== null && (
+        {tutor.feeMinPaise != null && (
           <div className="mt-4 flex items-center justify-between border-t border-ink-100 pt-3 sm:hidden">
             <span className="font-bold text-ink-900">
               {formatFee(tutor.feeMinPaise)}

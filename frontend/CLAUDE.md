@@ -15,6 +15,10 @@ npm run dev      # UI on :3000
 npm run build    # production build, also type-checks
 npm run start    # serve the production build
 npm run lint
+npm run test:e2e   # Playwright. Needs BOTH servers up and the demo data loaded:
+                   #   cd ..\backend
+                   #   .\mvnw.cmd spring-boot:run "-Dspring-boot.run.arguments=--apnatutor.demo.seed=true"
+                   # Runs against desktop Chrome and a Pixel 7 viewport.
 ```
 
 The backend must be running on :8080 for pages to load data. Start it with `cd ..\backend; .\mvnw.cmd spring-boot:run`.

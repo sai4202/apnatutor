@@ -42,3 +42,9 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Playwright (M6-05)
+/test-results/
+/playwright-report/
+/blob-report/
+/playwright/.cache/
