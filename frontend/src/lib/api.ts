@@ -13,6 +13,25 @@ export const API_BASE_URL =
 export const BACKEND_ORIGIN = API_BASE_URL.replace(/\/api\/v1\/?$/, "");
 
 /**
+ * How long a server-rendered request waits for the backend before giving up.
+ *
+ * This exists because fetch() has no default timeout. A host that refuses the
+ * connection fails instantly, and the catch blocks below then do their job. But a
+ * host that silently drops the packets leaves the request pending forever, and
+ * nothing is ever thrown for a catch to catch. A build container reaching for a
+ * backend that is not running is exactly that second case.
+ *
+ * Next.js allows a page 60 seconds to render, so such a hang does not merely
+ * degrade one page, it fails the whole build. Aborting turns the hang into an
+ * ordinary error, every caller falls back to its empty state, and an absent
+ * backend costs a sparse page instead of a broken deployment.
+ *
+ * Eight seconds is far longer than a healthy call and far shorter than the 60s
+ * budget, which leaves room for several sequential fetches on a single page.
+ */
+const SERVER_FETCH_TIMEOUT_MS = 8000;
+
+/**
  * The uniform error shape every endpoint returns (SOURCE_OF_TRUTH.md section 6).
  *
  * `code` is a stable machine enum — switch on it. `message` is for humans and may be reworded at
@@ -123,6 +142,7 @@ export interface City {
 export async function fetchSubjectTree(): Promise<SubjectNode[]> {
   try {
     const res = await fetch(`${API_BASE_URL}/public/catalog/subjects`, {
+      signal: AbortSignal.timeout(SERVER_FETCH_TIMEOUT_MS),
       next: { revalidate: 3600 },
     });
     if (!res.ok) return [];
@@ -135,6 +155,7 @@ export async function fetchSubjectTree(): Promise<SubjectNode[]> {
 export async function fetchCities(): Promise<City[]> {
   try {
     const res = await fetch(`${API_BASE_URL}/public/catalog/cities`, {
+      signal: AbortSignal.timeout(SERVER_FETCH_TIMEOUT_MS),
       next: { revalidate: 3600 },
     });
     if (!res.ok) return [];
@@ -213,6 +234,7 @@ export async function searchTutors(
 
   try {
     const res = await fetch(`${API_BASE_URL}/public/tutors?${query}`, {
+      signal: AbortSignal.timeout(SERVER_FETCH_TIMEOUT_MS),
       cache: "no-store",
     });
     if (!res.ok) return empty;
@@ -259,6 +281,7 @@ export async function fetchTutorProfile(
 ): Promise<PublicTutorProfile | null> {
   try {
     const res = await fetch(`${API_BASE_URL}/public/tutors/${id}`, {
+      signal: AbortSignal.timeout(SERVER_FETCH_TIMEOUT_MS),
       next: { revalidate: 300 },
     });
     if (!res.ok) return null;
@@ -306,6 +329,7 @@ export interface BackendHealth {
 export async function fetchBackendHealth(): Promise<BackendHealth> {
   try {
     const res = await fetch(`${BACKEND_ORIGIN}/actuator/health`, {
+      signal: AbortSignal.timeout(SERVER_FETCH_TIMEOUT_MS),
       cache: "no-store",
     });
     const body = await res.json();
@@ -359,6 +383,7 @@ export interface PublicReview {
 export async function fetchTutorReviews(id: number): Promise<PublicReview[]> {
   try {
     const res = await fetch(`${API_BASE_URL}/public/tutors/${id}/reviews`, {
+      signal: AbortSignal.timeout(SERVER_FETCH_TIMEOUT_MS),
       next: { revalidate: 300 },
     });
     if (!res.ok) return [];
